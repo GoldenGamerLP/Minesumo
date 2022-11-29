@@ -1,0 +1,39 @@
+plugins {
+    id 'java'
+}
+
+group 'me.alex.minesumo'
+version '1.0-SNAPSHOT'
+
+ext {
+    hscoreVersion = '4.1.32'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+
+    //Minestom dependency
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+
+
+    implementation 'scaffolding:core:unspecified'
+    compileOnly 'com.github.Minestom.Minestom:Minestom:e5d0a43ba4'
+
+
+
+    implementation 'me.hsgamer:hscore-config-common:4.1.32'
+    implementation 'me.hsgamer:hscore-config-annotated:4.1.32'
+    implementation 'me.hsgamer:hscore-config-simplixstorage:4.1.32'
+    implementation 'me.hsgamer:hscore-minestom-board:4.1.32'
+    implementation 'me.hsgamer:hscore-config-simpleconfiguration:4.1.32'
+
+
+
+
+}
