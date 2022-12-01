@@ -2,14 +2,23 @@ package me.alex.minesumo.data;
 
 import dev.hypera.scaffolding.Scaffolding;
 import lombok.SneakyThrows;
+import lombok.extern.apachecommons.CommonsLog;
+import lombok.extern.flogger.Flogger;
+import lombok.extern.java.Log;
+import lombok.extern.jbosslog.JBossLog;
 import lombok.extern.log4j.Log4j2;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
+import org.jglrxavpok.hephaistos.nbt.NBTException;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 @Log4j2
@@ -19,8 +28,11 @@ public class SchematicLoader {
     private final Path schematicFolder;
     private final Predicate<MapConfig> mapConfigPredicate;
 
+    private final CopyOnWriteArrayList<MapConfig> loadedMapConfigs;
+
     public SchematicLoader(Minesumo minesumo) {
         this.config = minesumo.getConfig();
+        this.loadedMapConfigs = new CopyOnWriteArrayList<>();
         this.schematicFolder = minesumo.getDataDirectory().resolve(config.getSchematicFolder());
         this.schematicFolder.toFile().mkdirs();
 
@@ -56,28 +68,35 @@ public class SchematicLoader {
         };
     }
 
-    @SneakyThrows
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
-        List<MapConfig> currentConfigs = config.getMaps();
+        Set<MapConfig> currentConfigs = config.getMaps();
         currentConfigs.removeIf(this.mapConfigPredicate);
 
         //Parallel loading of maps
         CompletableFuture<Void>[] schematicLoading = new CompletableFuture[currentConfigs.size()];
-        for (int i = currentConfigs.size() - 1; i >= 0; i--) {
-            MapConfig config = currentConfigs.get(i);
+        AtomicInteger index = new AtomicInteger(0);
+        for (MapConfig config : currentConfigs) {
 
-            schematicLoading[i] = CompletableFuture
+            schematicLoading[index.getAndIncrement()] = CompletableFuture
                     .completedFuture(config)
                     .thenApply(mapConfig -> schematicFolder.resolve(mapConfig.getSchematicFile()))
-                    .thenCompose(Scaffolding::fromPath)
+                    .thenCompose(path -> {
+                        //Dumm code. Why throw an extra exception when we are using futures
+                        try {
+                            return Scaffolding.fromPath(path);
+                        } catch (IOException | NBTException e) {
+                            throw new IllegalStateException(e);
+                        }
+                    })
                     .thenAccept(config::setMapSchematic)
-                    .exceptionally(throwable -> {
-                        if (throwable != null) log.error("Error while reading schematic!", throwable);
-                        return null;
-                    });
+                    .thenRun(() -> this.loadedMapConfigs.add(config));
         }
 
         return CompletableFuture.allOf(schematicLoading);
+    }
+
+    public List<MapConfig> getLoadedMapConfigs() {
+        return List.copyOf(loadedMapConfigs);
     }
 }

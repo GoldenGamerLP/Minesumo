@@ -10,7 +10,7 @@ import net.minestom.server.extensions.Extension;
 public class Minesumo extends Extension {
 
     private JsonConfigurationLoader<MinesumoMainConfig> cfg;
-    private SchematicLoader sceSchematicLoader;
+    private SchematicLoader schematicLoader;
 
     @Override
     public void preInitialize() {
@@ -20,7 +20,7 @@ public class Minesumo extends Extension {
                 MinesumoMainConfig.class
         );
 
-        this.sceSchematicLoader = new SchematicLoader(this);
+        this.schematicLoader = new SchematicLoader(this);
     }
 
     @Override
@@ -31,7 +31,7 @@ public class Minesumo extends Extension {
 
         log.info("Loaded configuration! \n Loading schematics...");
 
-        this.sceSchematicLoader.loadSchematics().whenComplete((unused, throwable) -> {
+        this.schematicLoader.loadSchematics().whenComplete((unused, throwable) -> {
             if (throwable != null) log.error("Error loading schematics", throwable);
             log.info("Loaded map configurations!");
         });
@@ -50,5 +50,9 @@ public class Minesumo extends Extension {
 
     public MinesumoMainConfig getConfig() {
         return cfg.getData();
+    }
+
+    public SchematicLoader getSchematicLoader() {
+        return schematicLoader;
     }
 }

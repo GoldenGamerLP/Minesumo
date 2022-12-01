@@ -5,7 +5,9 @@ import com.google.gson.annotations.SerializedName;
 import lombok.Getter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MinesumoMainConfig {
 
@@ -18,6 +20,6 @@ public class MinesumoMainConfig {
     @Getter
     @SerializedName("mapList")
     @Expose
-    private final List<MapConfig> maps = new ArrayList<>();
+    private final Set<MapConfig> maps = new HashSet<>();
 
 }
