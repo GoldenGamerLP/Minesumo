@@ -4,9 +4,7 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import lombok.Getter;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class MinesumoMainConfig {
@@ -15,6 +13,11 @@ public class MinesumoMainConfig {
     @SerializedName("mapFolder")
     @Expose
     private final String schematicFolder = "/schematicFolder";
+
+    @Getter
+    @SerializedName("isEditorMode")
+    @Expose
+    private final Boolean isInEditorMode = false;
 
 
     @Getter

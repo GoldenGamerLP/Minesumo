@@ -11,7 +11,7 @@ import net.minestom.server.coordinate.Pos;
 @Setter
 @Getter
 @RequiredArgsConstructor
-public class MapConfig {
+public class MapConfig implements Cloneable {
 
     @Expose(deserialize = false, serialize = false)
     private Schematic mapSchematic = null;
@@ -34,10 +34,20 @@ public class MapConfig {
 
     @SerializedName("deathLevel")
     @Expose
-    private Pos deathPositions = Pos.ZERO;
+    private Double deathLevel = 0.0D;
 
     @SerializedName("spectatorPosition")
     @Expose
     private Pos spectatorPosition = Pos.ZERO;
 
+    @Override
+    public MapConfig clone() {
+        try {
+            MapConfig clone = (MapConfig) super.clone();
+            // TODO: copy mutable state here, so the clone can't change the internals of the original
+            return clone;
+        } catch (CloneNotSupportedException e) {
+            throw new AssertionError();
+        }
+    }
 }

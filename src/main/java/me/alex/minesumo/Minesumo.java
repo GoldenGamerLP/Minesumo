@@ -3,6 +3,7 @@ package me.alex.minesumo;
 import lombok.extern.log4j.Log4j2;
 import me.alex.minesumo.data.SchematicLoader;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
+import me.alex.minesumo.listener.GlobalEventListener;
 import me.alex.minesumo.utils.JsonConfigurationLoader;
 import net.minestom.server.extensions.Extension;
 
@@ -35,6 +36,9 @@ public class Minesumo extends Extension {
             if (throwable != null) log.error("Error loading schematics", throwable);
             log.info("Loaded map configurations!");
         });
+
+        log.info("Enabling GlobalEventHandler");
+        new GlobalEventListener();
     }
 
     @Override

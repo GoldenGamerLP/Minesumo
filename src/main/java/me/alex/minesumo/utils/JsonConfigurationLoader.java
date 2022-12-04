@@ -42,6 +42,7 @@ public final class JsonConfigurationLoader<T> {
     private final Class<T> of;
     private final File file;
     private T gsonObject;
+
     /**
      * Used for extending or creating new FileDataLoader class.
      *

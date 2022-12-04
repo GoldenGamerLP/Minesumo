@@ -1,11 +1,6 @@
 package me.alex.minesumo.data;
 
 import dev.hypera.scaffolding.Scaffolding;
-import lombok.SneakyThrows;
-import lombok.extern.apachecommons.CommonsLog;
-import lombok.extern.flogger.Flogger;
-import lombok.extern.java.Log;
-import lombok.extern.jbosslog.JBossLog;
 import lombok.extern.log4j.Log4j2;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
@@ -68,6 +63,7 @@ public class SchematicLoader {
         };
     }
 
+    @SuppressWarnings("unchecked")
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
         Set<MapConfig> currentConfigs = config.getMaps();
