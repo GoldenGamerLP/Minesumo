@@ -4,12 +4,9 @@ import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.instances.Arena;
 import me.alex.minesumo.data.instances.MinesumoInstance;
-import me.alex.minesumo.utils.DefaultInstanceSettings;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
-import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.InstanceManager;
-import net.minestom.server.instance.SharedInstance;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -42,7 +39,7 @@ public class MapCreator {
         if (activeCalls.containsKey(mapConfig)) {
             CompletableFuture<Arena> waitingCall = new CompletableFuture<>();
 
-            activeCalls.computeIfPresent(mapConfig,(mapConfig1, completableFutures) -> {
+            activeCalls.computeIfPresent(mapConfig, (mapConfig1, completableFutures) -> {
                 completableFutures.add(waitingCall);
                 return completableFutures;
             });

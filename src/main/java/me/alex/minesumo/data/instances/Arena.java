@@ -1,6 +1,5 @@
 package me.alex.minesumo.data.instances;
 
-import kotlin.Pair;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.events.ArenaChangeStateEvent;
 import me.alex.minesumo.events.PlayerArenaDeathEvent;
@@ -8,53 +7,62 @@ import me.alex.minesumo.events.PlayerJoinArenaEvent;
 import me.alex.minesumo.events.PlayerLeaveArenaEvent;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.collision.BoundingBox;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.event.trait.InstanceEvent;
 import net.minestom.server.instance.SharedInstance;
 import net.minestom.server.timer.Scheduler;
-import net.minestom.server.timer.Task;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Arena extends SharedInstance {
 
-    private final Map<UUID,Pair<PlayerState,Player>> teams;
-    private final Map<UUID,PlayerState> playerStates;
-    private ArenaState state = ArenaState.WAITING_FOR_PLAYERS;
-    private final MapConfig mapConfig;
-    private final Scheduler scheduler = this.scheduler();
     private static final Duration
             roundStartingTime = Duration.ofSeconds(3),
             roundProcessTime = Duration.ofMinutes(3),
             roundEndingTime = Duration.ofSeconds(3);
-
     private static final int lifes = 1;
-
-    private Task
+    private final Map<Long, Team> teams;
+    private final Map<UUID, PlayerState> playerStates;
+    private final Map<UUID, Long> playersTeamIds;
+    private final MapConfig mapConfig;
+    private final Scheduler scheduler = this.scheduler();
+    private final TimerTask
+            roundWaitingPlayers,
             roundStartingTask,
             roundProcessTask,
             roundEndingTask;
+    private final Timer timer;
+    private ArenaState state = null;
 
     public Arena(MinesumoInstance instance, MapConfig config) {
         super(UUID.randomUUID(), instance);
 
         this.teams = new HashMap<>();
         this.playerStates = new HashMap<>();
+        this.playersTeamIds = new HashMap<>();
+        this.timer = new Timer(this.getUniqueId().toString());
         this.mapConfig = config;
 
-        BoundingBox boundingBox = new BoundingBox(30,30,30);
+        this.roundWaitingPlayers = new RoundWaitingTask();
+        this.roundStartingTask = new RoundStartingTask();
+        this.roundProcessTask = new RoundProcessTask();
+        this.roundEndingTask = new RoundEndingTask();
+
+
         //Innit Teams, spawns, scoerboard, timers etc
 
         registerListener();
 
         //Register
         MinecraftServer.getInstanceManager().registerSharedInstance(this);
+
+        //Only let players join if the arena is ready
+        changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
     }
 
     //Change! Only 1 v 1 update!
@@ -64,65 +72,95 @@ public class Arena extends SharedInstance {
     private void registerListener() {
         EventNode<InstanceEvent> node = this.eventNode();
 
-        node.addListener(PlayerArenaDeathEvent.class, playerDeathEvent -> {
+        node.addListener(PlayerArenaDeathEvent.class, this::handlePlayerDeath);
 
-        });
-
-        node.addListener(PlayerJoinArenaEvent.class,playerJoinArenaEvent -> {
+        node.addListener(PlayerJoinArenaEvent.class, playerJoinArenaEvent -> {
             Player player = playerJoinArenaEvent.getPlayer();
             //Register
             player.setAutoViewable(false);
-            player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
 
-           switch (this.state) {
-               case ENDING -> {
-                   playerJoinArenaEvent.setCancelled(true);
-               }
-               case WAITING_FOR_PLAYERS -> {
-                   player.teleport(this.mapConfig.getSpectatorPosition());
-                   player.setGameMode(GameMode.ADVENTURE);
+            switch (this.state) {
+                case ENDING, NORMAL_STARTING, INGAME -> {
+                    //Spectators only see spectators
+                    player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
+                    player.setGameMode(GameMode.SPECTATOR);
 
-                   //Send messages to players
-                   if(this.roundStartingTask == null) this.roundStartingTask = scheduler.buildTask(() -> {
-                       this.forEachAudience(audience ->
-                               audience.sendMessage(Component.text("Waiting for players")));
-                   }).repeat(Duration.ofSeconds(3)).schedule();
-               }
-               case NORMAL_STARTING -> {
-                   player.setGameMode(GameMode.SPECTATOR);
-               }
-           }
+                    //register player
+                    this.playerStates.put(player.getUuid(), PlayerState.SPECTATOR);
+                }
+
+                case WAITING_FOR_PLAYERS -> {
+                    //Player can only see each other in a instance
+                    player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
+                    player.teleport(this.mapConfig.getSpectatorPosition());
+                    player.setGameMode(GameMode.ADVENTURE);
+
+                    //register player
+                    this.playerStates.put(player.getUuid(), PlayerState.ALIVE);
+
+                    //Method --> areEnoughPlayers();
+                    if (this.getPlayers().size() == getMaxPlayers()) {
+                        this.changeArenaState(ArenaState.NORMAL_STARTING);
+                    }
+                }
+            }
         });
 
-        node.addListener(PlayerLeaveArenaEvent.class,playerLeaveArenaEvent -> {
-           Player player = playerLeaveArenaEvent.getPlayer();
-           switch (this.state) {
-               case WAITING_FOR_PLAYERS -> {
-                   boolean isLastPlayer = this.getPlayers().isEmpty();
+        node.addListener(PlayerLeaveArenaEvent.class, playerLeaveArenaEvent -> {
+            Player player = playerLeaveArenaEvent.getPlayer();
 
-                   if(isLastPlayer) {
-                       this.roundStartingTask.cancel();
-                       this.roundStartingTask = null;
+            //If player was spectator - ignore
+            if (this.playerStates.remove(player.getUuid()).equals(PlayerState.SPECTATOR)) {
+                return;
+            }
 
-                       this.unregisterInstance();
-                   }
-                   //Stop cooldown timer
-               }
-               case NORMAL_STARTING -> {
-                   //Draw
-               }
-               case ENDING -> {
-                   //If every player left, unregister instance
-                   if(this.getPlayers().size() == 0) MinecraftServer
-                           .getInstanceManager()
-                           .unregisterInstance(this);
-               }
-           }
+            switch (this.state) {
+                case WAITING_FOR_PLAYERS -> {
+                    //Do nothing?
+                }
+                case NORMAL_STARTING -> {
+                    this.changeArenaState(ArenaState.ENDING);
+                    //Draw
+                    //Reset timer
+                }
+                case ENDING -> {
+                    //If every player left, unregister instance
+                    if (this.getPlayers().size() == 0) MinecraftServer
+                            .getInstanceManager()
+                            .unregisterInstance(this);
+                }
+            }
         });
-    }
 
-    public void changeArenaPhase(ArenaState currentState, ArenaState newState) {
+        node.addListener(ArenaChangeStateEvent.class, playerState -> {
+            //Start tasks
+            switch (this.state) {
+                case WAITING_FOR_PLAYERS -> this.timer.scheduleAtFixedRate(
+                        this.roundWaitingPlayers,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+                case NORMAL_STARTING -> this.timer.scheduleAtFixedRate(
+                        this.roundStartingTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+                case INGAME -> this.timer.scheduleAtFixedRate(
+                        this.roundProcessTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+                case ENDING -> this.timer.scheduleAtFixedRate(
+                        this.roundEndingTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+            }
+        });
 
+        node.addListener(PlayerMoveEvent.class, playerMoveEvent -> {
+            switch (this.state) {
+                case NORMAL_STARTING -> {
+                    playerMoveEvent.setCancelled(true);
+                }
+            }
+        });
     }
 
     private void unregisterInstance() {
@@ -134,37 +172,26 @@ public class Arena extends SharedInstance {
         switch (this.state) {
             case WAITING_FOR_PLAYERS, ENDING -> player.teleport(this.mapConfig.getSpectatorPosition());
             case INGAME -> {
+                if (this.playerStates.get(player.getUuid()) == PlayerState.SPECTATOR) {
+                    event.setNewPlayerPosition(this.mapConfig.getSpectatorPosition());
+                    return;
+                }
 
+                //Remove one life from the players
+                //Add a death to the team
+                //Add a point for the other players team
             }
         }
     }
 
     private void changeArenaState(ArenaState state) {
         ArenaState currentState = this.state;
-        ArenaState newState = state;
         EventDispatcher.call(new ArenaChangeStateEvent(this, currentState));
 
-        this.state = newState;
+        this.state = state;
     }
 
-    public enum ArenaState{
-        WAITING_FOR_PLAYERS,
-        NORMAL_STARTING,
-        INGAME,
-        ENDING;
-    }
-
-    public enum ArenaMode {
-        OneVsOne,
-        OTHER;
-    }
-
-    public enum PlayerState {
-        SPECTATOR,
-        ALIVE;
-    }
-
-    public Map<String, Pair<PlayerState, List<Player>>> getTeams() {
+    public Map<Long, Team> getTeams() {
         return teams;
     }
 
@@ -178,5 +205,117 @@ public class Arena extends SharedInstance {
 
     public int getMaxPlayers() {
         return this.mapConfig.getGetSpawnPositions().length * this.mapConfig.getPlayerPerSpawnPosition();
+    }
+
+    public List<Player> getPlayers(PlayerState playerState) {
+        return this.getPlayers()
+                .stream()
+                .filter(player -> this.playerStates.get(player.getUuid()).equals(playerState))
+                .toList();
+    }
+
+    private void addPlayersToTeam() {
+        if (this.state != ArenaState.NORMAL_STARTING) return;
+        int playersPerSpawn = this.getPlayers(PlayerState.ALIVE).size() / this.mapConfig.getGetSpawnPositions().length;
+
+        long team = 0, player = 0;
+        for (Player player1 : this.getPlayers()) {
+            player++;
+
+            this.playersTeamIds.put(player1.getUuid(), team);
+
+            if (player == playersPerSpawn) team++;
+        }
+    }
+
+    public void teleportPlayerToSpawn(Player player) {
+        if (!this.playerStates.containsKey(player.getUuid())) return;
+        if (!this.playersTeamIds.containsKey(player.getUuid())) {
+            //Only specators
+            player.teleport(this.mapConfig.getSpectatorPosition());
+        }
+
+        //Ingame players
+        int spawn = Math.toIntExact(this.playersTeamIds.get(player.getUuid()));
+
+        player.teleport(this.mapConfig.getGetSpawnPositions()[spawn]);
+    }
+
+    public enum ArenaState {
+        WAITING_FOR_PLAYERS,
+        NORMAL_STARTING,
+        INGAME,
+        ENDING
+    }
+
+    public enum ArenaMode {
+        OneVsOne,
+        OTHER
+    }
+
+    public enum PlayerState {
+        SPECTATOR,
+        ALIVE
+    }
+
+    private class RoundProcessTask extends TimerTask {
+        long seconds = roundProcessTime.toSeconds();
+
+        @Override
+        public void run() {
+            if (state != ArenaState.INGAME) this.cancel();
+            if (seconds == 0) {
+                changeArenaState(ArenaState.ENDING);
+                this.cancel();
+            }
+            //Update scoreboards
+
+            seconds--;
+            if (seconds % 10 == 0)
+                forEachAudience(audience -> audience.sendMessage(Component.translatable("ending in")));
+        }
+    }
+
+    private class RoundStartingTask extends TimerTask {
+        long seconds = roundStartingTime.toSeconds();
+
+        @Override
+        public void run() {
+            if (state != ArenaState.NORMAL_STARTING) this.cancel();
+            if (seconds == 0) {
+                addPlayersToTeam();
+                getPlayers().forEach(Arena.this::teleportPlayerToSpawn);
+
+                changeArenaState(ArenaState.INGAME);
+                this.cancel();
+            }
+
+            seconds--;
+            forEachAudience(audience -> audience.sendMessage(Component.translatable("starting.in")));
+        }
+    }
+
+    private class RoundWaitingTask extends TimerTask {
+        @Override
+        public void run() {
+            forEachAudience(audience ->
+                    audience.sendActionBar(Component.translatable("waiting.players")));
+            if (state != ArenaState.WAITING_FOR_PLAYERS) this.cancel();
+        }
+    }
+
+    private class RoundEndingTask extends TimerTask {
+        long seconds = roundEndingTime.getSeconds();
+
+        @Override
+        public void run() {
+            if (state != ArenaState.ENDING) this.cancel();
+            if (seconds == 0) {
+                unregisterInstance();
+                this.cancel();
+            }
+            seconds--;
+            forEachAudience(audience -> audience.sendMessage(Component.translatable("round.ending")));
+        }
     }
 }

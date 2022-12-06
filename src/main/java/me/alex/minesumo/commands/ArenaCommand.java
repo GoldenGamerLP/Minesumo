@@ -17,11 +17,11 @@ public class ArenaCommand extends Command {
         var playerArg = ArgumentType.Entity("player").onlyPlayers(true).singleEntity(true);
 
         this.addSyntax((sender, commandString) -> {
-            if(sender instanceof Player player) {
-                if(player.getInstance() instanceof Arena arena) {
+            if (sender instanceof Player player) {
+                if (player.getInstance() instanceof Arena arena) {
                     player.sendMessage("Du bist in einer Arena!");
                 } else player.sendMessage("Bist in keiner Arena!");
             }
-        },arg);
+        }, arg);
     }
 }
