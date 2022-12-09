@@ -36,6 +36,7 @@ public class GlobalEventListener {
             if (!(playerMoveEvent.getInstance() instanceof Arena arena)) return;
             if (!(playerMoveEvent.getNewPosition().y() > arena.getMapConfig().getDeathLevel())) return;
 
+
             PlayerArenaDeathEvent death = new PlayerArenaDeathEvent(playerMoveEvent.getPlayer(), arena);
             gl.call(death);
 

@@ -5,6 +5,7 @@ import me.alex.minesumo.events.ArenaChangeStateEvent;
 import me.alex.minesumo.events.PlayerArenaDeathEvent;
 import me.alex.minesumo.events.PlayerJoinArenaEvent;
 import me.alex.minesumo.events.PlayerLeaveArenaEvent;
+import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
@@ -14,7 +15,6 @@ import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.event.trait.InstanceEvent;
 import net.minestom.server.instance.SharedInstance;
-import net.minestom.server.timer.Scheduler;
 
 import java.time.Duration;
 import java.util.*;
@@ -25,12 +25,12 @@ public class Arena extends SharedInstance {
             roundStartingTime = Duration.ofSeconds(3),
             roundProcessTime = Duration.ofMinutes(3),
             roundEndingTime = Duration.ofSeconds(3);
+
     private static final int lifes = 1;
-    private final Map<Long, Team> teams;
+    private final Map<Integer, Team> teams;
     private final Map<UUID, PlayerState> playerStates;
-    private final Map<UUID, Long> playersTeamIds;
+    private final Map<UUID, Integer> playersTeamIds;
     private final MapConfig mapConfig;
-    private final Scheduler scheduler = this.scheduler();
     private final TimerTask
             roundWaitingPlayers,
             roundStartingTask,
@@ -64,10 +64,6 @@ public class Arena extends SharedInstance {
         //Only let players join if the arena is ready
         changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
     }
-
-    //Change! Only 1 v 1 update!
-    ////////////////////////////////
-    ////////////////////////////////
 
     private void registerListener() {
         EventNode<InstanceEvent> node = this.eventNode();
@@ -191,7 +187,7 @@ public class Arena extends SharedInstance {
         this.state = state;
     }
 
-    public Map<Long, Team> getTeams() {
+    public Map<Integer, Team> getTeams() {
         return teams;
     }
 
@@ -216,15 +212,19 @@ public class Arena extends SharedInstance {
 
     private void addPlayersToTeam() {
         if (this.state != ArenaState.NORMAL_STARTING) return;
-        int playersPerSpawn = this.getPlayers(PlayerState.ALIVE).size() / this.mapConfig.getGetSpawnPositions().length;
 
-        long team = 0, player = 0;
-        for (Player player1 : this.getPlayers()) {
-            player++;
+        List<List<Player>> teams = ListUtils.distributeNumbers(
+                this.getPlayers(PlayerState.ALIVE),
+                this.mapConfig.getGetSpawnPositions().length);
 
-            this.playersTeamIds.put(player1.getUuid(), team);
+        for (int team = 0; team < teams.size(); team++) {
+            List<Player> players = teams.get(team);
 
-            if (player == playersPerSpawn) team++;
+            this.teams.put(team, new Team(players));
+
+            for (Player player : players) {
+                this.playersTeamIds.put(player.getUuid(), team);
+            }
         }
     }
 
@@ -236,9 +236,8 @@ public class Arena extends SharedInstance {
         }
 
         //Ingame players
-        int spawn = Math.toIntExact(this.playersTeamIds.get(player.getUuid()));
-
-        player.teleport(this.mapConfig.getGetSpawnPositions()[spawn]);
+        int playerTeam = this.playersTeamIds.get(player.getUuid());
+        player.teleport(this.mapConfig.getGetSpawnPositions()[playerTeam]);
     }
 
     public enum ArenaState {

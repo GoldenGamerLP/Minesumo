@@ -1,10 +1,8 @@
 package me.alex.minesumo.data.instances;
 
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.events.PlayerArenaDeathEvent;
 import me.alex.minesumo.utils.DefaultInstanceSettings;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.instance.InstanceContainer;
 
@@ -43,7 +41,6 @@ public class MinesumoInstance extends InstanceContainer {
 
             if (playerMoveEvent.getNewPosition().y() < this.config.getDeathLevel() ||
                     !this.getWorldBorder().isInside(playerMoveEvent.getNewPosition())) {
-
 
 
             }
