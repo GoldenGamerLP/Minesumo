@@ -1,9 +1,12 @@
 package me.alex.minesumo;
 
+import io.github.bloepiloepi.pvp.PvpExtension;
 import lombok.extern.log4j.Log4j2;
 import me.alex.minesumo.data.SchematicLoader;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
 import me.alex.minesumo.listener.GlobalEventListener;
+import me.alex.minesumo.manager.MapCreator;
+import me.alex.minesumo.manager.MapManager;
 import me.alex.minesumo.utils.JsonConfigurationLoader;
 import net.minestom.server.extensions.Extension;
 
@@ -12,6 +15,8 @@ public class Minesumo extends Extension {
 
     private JsonConfigurationLoader<MinesumoMainConfig> cfg;
     private SchematicLoader schematicLoader;
+    private MapCreator mapCreator;
+    private MapManager mapManager;
 
     @Override
     public void preInitialize() {
@@ -20,8 +25,6 @@ public class Minesumo extends Extension {
                 this.getDataDirectory().resolve("/configuration.json").toFile(),
                 MinesumoMainConfig.class
         );
-
-        this.schematicLoader = new SchematicLoader(this);
     }
 
     @Override
@@ -37,8 +40,15 @@ public class Minesumo extends Extension {
             log.info("Loaded map configurations!");
         });
 
-        log.info("Enabling GlobalEventHandler");
-        new GlobalEventListener();
+        log.info("Loaded Schematics! \n Enabling PVP...");
+        PvpExtension.init();
+
+        log.info("Enabling GlobalEventHandler. You can join now.");
+
+        this.schematicLoader = new SchematicLoader(this);
+        this.mapCreator = new MapCreator(this);
+        this.mapManager = new MapManager(this);
+        new GlobalEventListener(this);
     }
 
     @Override
@@ -58,5 +68,13 @@ public class Minesumo extends Extension {
 
     public SchematicLoader getSchematicLoader() {
         return schematicLoader;
+    }
+
+    public MapCreator getMapCreator() {
+        return mapCreator;
+    }
+
+    public MapManager getMapManager() {
+        return mapManager;
     }
 }

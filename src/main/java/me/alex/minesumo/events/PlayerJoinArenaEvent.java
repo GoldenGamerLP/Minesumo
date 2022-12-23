@@ -1,7 +1,7 @@
 package me.alex.minesumo.events;
 
 import lombok.Getter;
-import me.alex.minesumo.data.instances.Arena;
+import me.alex.minesumo.data.instances.ArenaImpl;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.instance.AddEntityToInstanceEvent;
 
@@ -9,12 +9,12 @@ import net.minestom.server.event.instance.AddEntityToInstanceEvent;
 public class PlayerJoinArenaEvent extends AddEntityToInstanceEvent {
 
     private final Player player;
-    private final Arena arena;
+    private final ArenaImpl arenaImpl;
 
-    public PlayerJoinArenaEvent(Arena arena, Player player) {
-        super(arena, player);
+    public PlayerJoinArenaEvent(ArenaImpl arenaImpl, Player player) {
+        super(arenaImpl, player);
 
-        this.arena = arena;
+        this.arenaImpl = arenaImpl;
         this.player = player;
     }
 

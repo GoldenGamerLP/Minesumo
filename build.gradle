@@ -23,11 +23,13 @@ dependencies {
 
 
     implementation 'scaffolding:core:unspecified'
+    implementation 'com.github.TogAr2:MinestomPvP:b618d80297'
     implementation 'com.github.Minestom.Minestom:Minestom:e5d0a43ba4'
     implementation 'org.aeonbits.owner:owner:1.0.12'
-    implementation 'me.hsgamer:hscore-minestom-board:4.1.32'
+    implementation 'me.hsgamer:hscore-minestom-board:4.1.33'
     implementation 'org.apache.logging.log4j:log4j-api:2.19.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.19.0'
+
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'

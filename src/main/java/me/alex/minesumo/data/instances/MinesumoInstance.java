@@ -3,7 +3,6 @@ package me.alex.minesumo.data.instances;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.utils.DefaultInstanceSettings;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.instance.InstanceContainer;
 
 import java.time.Duration;
@@ -36,18 +35,13 @@ public class MinesumoInstance extends InstanceContainer {
     }
 
     private void registerBasicListener() {
-        this.eventNode().addListener(PlayerMoveEvent.class, playerMoveEvent -> {
-            if (playerMoveEvent.isOnGround()) return;
-
-            if (playerMoveEvent.getNewPosition().y() < this.config.getDeathLevel() ||
-                    !this.getWorldBorder().isInside(playerMoveEvent.getNewPosition())) {
-
-
-            }
-        });
     }
 
-    public Arena createCopy() {
-        return new Arena(this, this.config);
+    public MapConfig getConfig() {
+        return config;
+    }
+
+    public ArenaImpl createCopy() {
+        return new ArenaImpl(this, this.config);
     }
 }

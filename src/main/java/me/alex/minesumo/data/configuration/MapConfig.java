@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import net.minestom.server.coordinate.Pos;
 
+import java.util.List;
+
 @Setter
 @Getter
 @RequiredArgsConstructor
@@ -30,7 +32,7 @@ public class MapConfig implements Cloneable {
 
     @SerializedName("spawnPositions")
     @Expose
-    private Pos[] getSpawnPositions = new Pos[0];
+    private List<Pos> getSpawnPositions = List.of();
 
     @SerializedName("deathLevel")
     @Expose
@@ -44,7 +46,6 @@ public class MapConfig implements Cloneable {
     public MapConfig clone() {
         try {
             MapConfig clone = (MapConfig) super.clone();
-            // TODO: copy mutable state here, so the clone can't change the internals of the original
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
