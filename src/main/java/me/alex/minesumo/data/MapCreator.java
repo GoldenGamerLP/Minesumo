@@ -1,4 +1,4 @@
-package me.alex.minesumo.manager;
+package me.alex.minesumo.data;
 
 import io.github.bloepiloepi.pvp.config.AttackConfig;
 import io.github.bloepiloepi.pvp.config.ExplosionConfig;

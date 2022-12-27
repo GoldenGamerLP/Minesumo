@@ -2,7 +2,7 @@ package me.alex.minesumo.data;
 
 import dev.hypera.scaffolding.Scaffolding;
 import dev.hypera.scaffolding.schematic.Schematic;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
@@ -19,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
-@Log4j2
+@Slf4j
 public class SchematicLoader {
 
     private final MinesumoMainConfig config;
@@ -33,8 +33,9 @@ public class SchematicLoader {
     public SchematicLoader(Minesumo minesumo) {
         this.config = minesumo.getConfig();
         this.loadedMapConfigs = new CopyOnWriteArrayList<>();
-        this.schematicFolder = minesumo.getDataDirectory().resolve(config.getSchematicFolder());
-        this.schematicFolder.toFile().mkdirs();
+        //Todo: Replace the schematics with the config value
+        this.schematicFolder = minesumo.getDataDirectory().resolve("schematics");
+        this.schematicFolder.toFile().mkdir();
         this.minesumo = minesumo;
 
         this.mapConfigPredicate = mapConfig -> {
@@ -70,8 +71,8 @@ public class SchematicLoader {
     }
 
     public CompletableFuture<MinesumoInstance> loadSchematic(MapConfig config) {
-        if (mapConfigPredicate.test(config))
-            return CompletableFuture.completedFuture(null);
+        //if (mapConfigPredicate.test(config))
+        //            return CompletableFuture.completedFuture(null);
 
         @NotNull CompletableFuture<Schematic> schematic;
         try {
@@ -92,7 +93,9 @@ public class SchematicLoader {
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
         Set<MapConfig> currentConfigs = config.getMaps();
+        log.info("Found {} maps!", currentConfigs.size());
         currentConfigs.removeIf(this.mapConfigPredicate);
+        log.info("After cleanup found {} maps!", currentConfigs.size());
 
         //Parallel loading of maps
         CompletableFuture<Void>[] schematicLoading = new CompletableFuture[currentConfigs.size()];
@@ -102,22 +105,27 @@ public class SchematicLoader {
             schematicLoading[index.getAndIncrement()] = CompletableFuture
                     .completedFuture(config)
                     .thenApply(mapConfig -> schematicFolder.resolve(mapConfig.getSchematicFile()))
-                    .thenCompose(path -> {
+                    .thenComposeAsync(path -> {
                         //TODO: Dumm code. Why throw an extra exception when we are using futures
                         try {
                             return Scaffolding.fromPath(path);
                         } catch (IOException | NBTException e) {
-                            throw new IllegalStateException(e);
+                            log.warn("Error while loading schematic: {}", path, e);
+                            return CompletableFuture.failedFuture(e);
                         }
                     })
                     .thenAccept(config::setMapSchematic)
-                    .thenRun(() -> this.loadedMapConfigs.add(config));
+                    .thenRun(() -> {
+                        log.info("Added schematic {}", config.getSchematicFile());
+                        this.loadedMapConfigs.add(config);
+                    });
         }
 
         return CompletableFuture.allOf(schematicLoading);
     }
 
     public List<MapConfig> getLoadedMapConfigs() {
+        log.info("There are {} loaded schematics", this.loadedMapConfigs.size());
         return List.copyOf(loadedMapConfigs);
     }
 

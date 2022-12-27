@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
  * @param <T> The corresponding class
  * @author Alex W - GoldenGamer_LP
  */
-@Log4j2(topic = "Configuration-Loader")
+@Slf4j(topic = "Configuration-Loader")
 public final class JsonConfigurationLoader<T> {
 
     private static Gson gson;
@@ -61,8 +61,9 @@ public final class JsonConfigurationLoader<T> {
     public JsonConfigurationLoader<T> load() {
         try {
             if (!file.exists()) {
-                log.info("Creating [{}] File: {}", this.file, createFileIfNotExists());
+                log.info("Creating [{}] File successfully: {}", this.file, createFileIfNotExists());
                 gsonObject = of.getDeclaredConstructor().newInstance();
+                writeToFile();
             } else readFromFile();
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
                  NoSuchMethodException e) {

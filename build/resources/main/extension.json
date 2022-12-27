@@ -1,0 +1,5 @@
+{
+  "entrypoint": "me.alex.minesumo.Minesumo",
+  "name": "Minsumo",
+  "version" : "1.0-Beta"
+}

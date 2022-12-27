@@ -4,10 +4,9 @@ import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.ArenaPlayer;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.instances.ArenaImpl;
-import me.alex.minesumo.events.PlayerArenaDeathEvent;
-import me.alex.minesumo.events.PlayerJoinArenaEvent;
-import me.alex.minesumo.events.PlayerLeaveArenaEvent;
+import me.alex.minesumo.events.*;
 import me.alex.minesumo.manager.MapManager;
+import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
@@ -52,7 +51,8 @@ public class GlobalEventListener {
 
             mpf.ifPresentOrElse(mapConfig -> {
                 minesumo.getMapManager().getAvailableMap(mapConfig, ArenaImpl.ArenaState.WAITING_FOR_PLAYERS).whenComplete((arena, throwable) -> {
-                    playerLoginEvent.getPlayer().setInstance(arena);
+                    System.out.println(arena.getState());
+                    minesumo.getMapManager().queueArena(playerLoginEvent.getPlayer(), arena);
                 });
             }, () -> playerLoginEvent.getPlayer().kick("No map found"));
         });
@@ -68,19 +68,31 @@ public class GlobalEventListener {
 
         if (!isEditorMode) gl.addListener(PlayerMoveEvent.class, playerMoveEvent -> {
             if (!(playerMoveEvent.getInstance() instanceof ArenaImpl arenaImpl)) return;
-            if (!(playerMoveEvent.getNewPosition().y() > arenaImpl.getMapConfig().getDeathLevel())) return;
+            if (!(playerMoveEvent.getNewPosition().y() <= arenaImpl.getMapConfig().getDeathLevel())) return;
 
 
-            PlayerArenaDeathEvent death = new PlayerArenaDeathEvent(playerMoveEvent.getPlayer(), arenaImpl);
+            PlayerOutOfArenaEvent death = new PlayerOutOfArenaEvent(playerMoveEvent.getPlayer(), arenaImpl);
             gl.call(death);
-
             if (death.getNewPlayerPosition() != null) playerMoveEvent.setNewPosition(death.getNewPlayerPosition());
+        });
+
+        gl.addListener(ArenaWinEvent.class, arenaWinEvent -> {
+            arenaWinEvent.getInstance().sendMessage(Component.text("Win! :" + arenaWinEvent.getTeamId()));
+        });
+
+        gl.addListener(TeamEliminatedEvent.class, event -> {
+            event.getInstance().sendMessage(Component.text("Team death! :" + event.getTeamID()));
+        });
+
+        gl.addListener(PlayerDeathEvent.class, playerDeathEvent -> {
+            playerDeathEvent.getInstance().sendMessage(Component.text("Player Death! :" + playerDeathEvent.getPlayer().getUsername()));
         });
 
         //Todo: Handle saving of player
         MinecraftServer.getConnectionManager().setPlayerProvider(ArenaPlayer::new);
 
 
-        container.eventNode().addListener(PlayerMoveEvent.class, playerMoveEvent -> playerMoveEvent.setCancelled(true));
+        if (!isEditorMode)
+            container.eventNode().addListener(PlayerMoveEvent.class, playerMoveEvent -> playerMoveEvent.setCancelled(true));
     }
 }

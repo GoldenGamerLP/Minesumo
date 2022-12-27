@@ -1,10 +1,11 @@
 package me.alex.minesumo.manager;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.alex.minesumo.Minesumo;
+import me.alex.minesumo.data.MapCreator;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.instances.ArenaImpl;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.entity.Player;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,14 +23,11 @@ public class MapManager {
     }
 
     private final List<MapConfig> availableMapConfigs;
-    private final List<UUID> runningArenas;
     private final MapCreator mapCreator;
 
     public MapManager(Minesumo minesumo) {
         this.availableMapConfigs = minesumo.getSchematicLoader().getLoadedMapConfigs();
         this.mapCreator = minesumo.getMapCreator();
-
-        this.runningArenas = new ObjectArrayList<>();
     }
 
     /**
@@ -76,6 +74,12 @@ public class MapManager {
     public CompletableFuture<ArenaImpl> getAvailableMap(UUID uuid) {
         ArenaImpl arenaImpl = (ArenaImpl) MinecraftServer.getInstanceManager().getInstance(uuid);
         return CompletableFuture.completedFuture(arenaImpl);
+    }
+
+    public void queueArena(Player player, ArenaImpl impl) {
+        MinecraftServer.getSchedulerManager().scheduleNextTick(() -> {
+            player.setInstance(impl, impl.getMapConfig().getSpectatorPosition());
+        });
     }
 
     public enum MapSelectionStrategy {

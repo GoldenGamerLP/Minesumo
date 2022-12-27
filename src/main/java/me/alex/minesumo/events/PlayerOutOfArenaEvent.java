@@ -8,13 +8,13 @@ import net.minestom.server.event.trait.PlayerEvent;
 import net.minestom.server.instance.Instance;
 import org.jetbrains.annotations.NotNull;
 
-public class PlayerArenaDeathEvent implements InstanceEvent, PlayerEvent {
+public class PlayerOutOfArenaEvent implements InstanceEvent, PlayerEvent {
 
     private final Player player;
     private final ArenaImpl arenaImpl;
     private Pos newPlayerPosition = null;
 
-    public PlayerArenaDeathEvent(Player player, ArenaImpl arenaImpl) {
+    public PlayerOutOfArenaEvent(Player player, ArenaImpl arenaImpl) {
         this.player = player;
         this.arenaImpl = arenaImpl;
     }

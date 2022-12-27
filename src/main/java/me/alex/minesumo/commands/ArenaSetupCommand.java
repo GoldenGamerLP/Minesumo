@@ -16,21 +16,24 @@ import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import java.util.stream.Stream;
 
 public class ArenaSetupCommand extends Command {
 
-    private final WeakHashMap<UUID, MinesumoInstance> activeMaps;
+    private final Map<UUID, MinesumoInstance> activeMaps;
 
     public ArenaSetupCommand(Minesumo minesumo) {
-        super("setup", "create");
-        this.activeMaps = new WeakHashMap<>();
+        super("setup");
+        this.activeMaps = new HashMap<>();
 
         this.setCondition(Conditions::playerOnly);
 
         var nameArgument = ArgumentType.Word("nameArgument");
+
+        var join = ArgumentType.Literal("join");
 
         var set = ArgumentType.Literal("set");
 
@@ -60,6 +63,7 @@ public class ArenaSetupCommand extends Command {
         });
 
         addSyntax((sender, context) -> {
+            sender.sendMessage("WADASSADMLMKFMKOFMFKMKFMFMK");
             if (!(sender instanceof Player player)) return;
             if (this.activeMaps.containsKey(player.getUuid())) {
                 player.sendMessage("You are already setupping.");
@@ -97,9 +101,9 @@ public class ArenaSetupCommand extends Command {
                         MinecraftServer.getInstanceManager().unregisterInstance(this.activeMaps.remove(pe.getUuid()));
                     });
                     player.sendMessage("You are now setupping.");
-                }).join();
+                });
             });
-        }, nameArgument);
+        }, join, nameArgument);
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
@@ -149,7 +153,7 @@ public class ArenaSetupCommand extends Command {
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
-            if (this.activeMaps.containsKey(player.getUuid())) {
+            if (!this.activeMaps.containsKey(player.getUuid())) {
                 player.sendMessage("You are not setupping");
                 return;
             }
@@ -157,13 +161,16 @@ public class ArenaSetupCommand extends Command {
             MapConfig config = this.activeMaps.remove(player.getUuid()).getConfig();
             minesumo.getConfig().getMaps().add(config);
             player.sendMessage("Please restart to ensure using the config correctly. \n You can settup another arena.");
-        });
+            MinecraftServer.stopCleanly();
+        }, save);
+
+        MinecraftServer.getCommandManager().register(this);
     }
 
     private void removeSpawn(CommandSender sender, CommandContext commandContext) {
         Player player = (Player) sender;
 
-        if (this.activeMaps.containsKey(player.getUuid())) {
+        if (!this.activeMaps.containsKey(player.getUuid())) {
             player.sendMessage("You are not setupping.");
             return;
         }
@@ -187,7 +194,7 @@ public class ArenaSetupCommand extends Command {
     private void addSpawn(CommandSender sender, CommandContext commandContext) {
         Player player = (Player) sender;
 
-        if (this.activeMaps.containsKey(player.getUuid())) {
+        if (!this.activeMaps.containsKey(player.getUuid())) {
             player.sendMessage("You are not setupping.");
             return;
         }

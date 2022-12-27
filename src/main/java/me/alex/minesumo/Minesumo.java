@@ -1,16 +1,19 @@
 package me.alex.minesumo;
 
-import io.github.bloepiloepi.pvp.PvpExtension;
-import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
+import me.alex.minesumo.commands.ArenaCommand;
+import me.alex.minesumo.commands.ArenaSetupCommand;
+import me.alex.minesumo.data.MapCreator;
 import me.alex.minesumo.data.SchematicLoader;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
+import me.alex.minesumo.data.configuration.converter.PosConverter;
 import me.alex.minesumo.listener.GlobalEventListener;
-import me.alex.minesumo.manager.MapCreator;
 import me.alex.minesumo.manager.MapManager;
 import me.alex.minesumo.utils.JsonConfigurationLoader;
+import net.minestom.server.coordinate.Pos;
 import net.minestom.server.extensions.Extension;
 
-@Log4j2
+@Slf4j
 public class Minesumo extends Extension {
 
     private JsonConfigurationLoader<MinesumoMainConfig> cfg;
@@ -22,9 +25,11 @@ public class Minesumo extends Extension {
     public void preInitialize() {
         //For Config Uses
         this.cfg = new JsonConfigurationLoader<>(
-                this.getDataDirectory().resolve("/configuration.json").toFile(),
+                this.getDataDirectory().resolve("configuration.json").toFile(),
                 MinesumoMainConfig.class
         );
+
+        JsonConfigurationLoader.registerConverter(Pos.class, new PosConverter());
     }
 
     @Override
@@ -32,23 +37,22 @@ public class Minesumo extends Extension {
         log.info("Initializing \n Loading configuration...");
 
         this.cfg.load();
+        this.schematicLoader = new SchematicLoader(this);
 
         log.info("Loaded configuration! \n Loading schematics...");
 
         this.schematicLoader.loadSchematics().whenComplete((unused, throwable) -> {
             if (throwable != null) log.error("Error loading schematics", throwable);
             log.info("Loaded map configurations!");
+
+            this.mapCreator = new MapCreator(this);
+            this.mapManager = new MapManager(this);
+            new GlobalEventListener(this);
         });
 
-        log.info("Loaded Schematics! \n Enabling PVP...");
-        PvpExtension.init();
-
-        log.info("Enabling GlobalEventHandler. You can join now.");
-
-        this.schematicLoader = new SchematicLoader(this);
-        this.mapCreator = new MapCreator(this);
-        this.mapManager = new MapManager(this);
-        new GlobalEventListener(this);
+        new ArenaCommand("minesumo", this);
+        new ArenaSetupCommand(this);
+        log.info("Enabled GlobalEventHandler! \n >>> You can join now <<<");
     }
 
     @Override

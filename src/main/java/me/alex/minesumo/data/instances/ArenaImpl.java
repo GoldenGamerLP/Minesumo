@@ -3,10 +3,7 @@ package me.alex.minesumo.data.instances;
 import me.alex.minesumo.data.Arena;
 import me.alex.minesumo.data.ArenaPlayer;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.events.ArenaChangeStateEvent;
-import me.alex.minesumo.events.PlayerArenaDeathEvent;
-import me.alex.minesumo.events.PlayerJoinArenaEvent;
-import me.alex.minesumo.events.PlayerLeaveArenaEvent;
+import me.alex.minesumo.events.*;
 import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
@@ -29,7 +26,7 @@ public class ArenaImpl extends Arena {
             roundProcessTime = Duration.ofMinutes(3),
             roundEndingTime = Duration.ofSeconds(3);
 
-    private static final int maxLifes = 1;
+    private static final int maxLifes = 0;
     private final Map<UUID, PlayerState> playerStates;
     private final Map<UUID, Integer> playersTeamIds;
     private final MapConfig mapConfig;
@@ -41,7 +38,7 @@ public class ArenaImpl extends Arena {
     private final Timer timer;
     private final BossBar gameBar;
     private Integer[] lifes;
-    private ArenaState state = null;
+    private ArenaState state = ArenaState.WAITING_FOR_PLAYERS;
 
     public ArenaImpl(MinesumoInstance instance, MapConfig config) {
         super(UUID.randomUUID(), instance);
@@ -49,10 +46,10 @@ public class ArenaImpl extends Arena {
         this.mapConfig = config;
 
         this.timer = new Timer(this.getUniqueId().toString());
-        this.gameBar = BossBar.bossBar(Component.empty(), 1F, BossBar.Color.RED, BossBar.Overlay.PROGRESS);
+        this.gameBar = BossBar.bossBar(Component.empty(), 1F, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
 
-        this.playerStates = new WeakHashMap<>();
-        this.playersTeamIds = new WeakHashMap<>();
+        this.playerStates = new HashMap<>();
+        this.playersTeamIds = new HashMap<>();
 
 
         this.roundWaitingPlayers = new RoundWaitingTask();
@@ -75,9 +72,15 @@ public class ArenaImpl extends Arena {
     private void registerListener() {
         EventNode<InstanceEvent> node = this.eventNode();
 
-        node.addListener(PlayerArenaDeathEvent.class, this::handlePlayerDeath);
+        node.addListener(PlayerOutOfArenaEvent.class, this::handlePlayerOutOfArena);
         node.addListener(PlayerJoinArenaEvent.class, this::handlePlayerJoinArenaEvent);
         node.addListener(PlayerLeaveArenaEvent.class, this::handlePlayerLeaveArenaEvent);
+        node.addListener(TeamEliminatedEvent.class, teamEliminatedEvent -> {
+            if (this.playersTeamIds.values().stream().distinct().count() == 1) {
+                int teamID = (int) this.playersTeamIds.values().toArray()[0];
+                EventDispatcher.call(new ArenaWinEvent(getPlayers(teamID), teamID));
+            }
+        });
 
         EventListener<PlayerMoveEvent> moveEvent = EventListener.builder(PlayerMoveEvent.class)
                 .filter(ignored -> this.state.equals(ArenaState.NORMAL_STARTING))
@@ -86,9 +89,9 @@ public class ArenaImpl extends Arena {
                 .build();
 
         node.addListener(moveEvent);
-        node.addListener(ArenaChangeStateEvent.class, playerState -> {
+        node.addListener(ArenaChangeStateEvent.class, arena -> {
             //Start tasks
-            switch (this.state) {
+            switch (arena.getArena().getState()) {
                 case WAITING_FOR_PLAYERS -> this.timer.scheduleAtFixedRate(
                         this.roundWaitingPlayers,
                         0,
@@ -114,7 +117,9 @@ public class ArenaImpl extends Arena {
     private void handlePlayerLeaveArenaEvent(PlayerLeaveArenaEvent playerLeaveArenaEvent) {
         Player player = playerLeaveArenaEvent.getPlayer();
 
-        if (playerLeaveArenaEvent.getArenaImpl() == null) return;
+        if (playerLeaveArenaEvent.getArenaImpl() == null) {
+            return;
+        }
         player.hideBossBar(gameBar);
 
         //If player was spectator - ignore
@@ -131,17 +136,18 @@ public class ArenaImpl extends Arena {
                 //Draw
                 //Reset timer
             }
+            case INGAME -> {
+                int team = this.getTeams().remove(player.getUuid());
+                if (getPlayers(team).size() == 0) EventDispatcher.call(new TeamEliminatedEvent(this, team, player));
+            }
             case ENDING -> {
                 //If every player left, unregister instance
-                if (this.getPlayers().size() == 0) MinecraftServer
-                        .getInstanceManager()
-                        .unregisterInstance(this);
+
             }
         }
     }
 
     private void handlePlayerJoinArenaEvent(PlayerJoinArenaEvent playerJoinArenaEvent) {
-
         Player player = playerJoinArenaEvent.getPlayer();
         //Register
         if (playerJoinArenaEvent.isCancelled()) return;
@@ -156,10 +162,11 @@ public class ArenaImpl extends Arena {
 
             case WAITING_FOR_PLAYERS -> {
                 //Player can only see each other in a instance
+                player.setRespawnPoint(this.mapConfig.getSpectatorPosition());
+                player.teleport(this.mapConfig.getSpectatorPosition());
                 player.setAutoViewable(false);
                 player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
-                player.teleport(this.mapConfig.getSpectatorPosition());
-                player.setGameMode(GameMode.ADVENTURE);
+                player.setGameMode(GameMode.CREATIVE);
 
                 //register player
                 this.playerStates.put(player.getUuid(), PlayerState.ALIVE);
@@ -169,6 +176,7 @@ public class ArenaImpl extends Arena {
                     this.changeArenaState(ArenaState.NORMAL_STARTING);
                 }
             }
+            case LOADING -> playerJoinArenaEvent.setCancelled(true);
         }
     }
 
@@ -187,7 +195,7 @@ public class ArenaImpl extends Arena {
         MinecraftServer.getInstanceManager().unregisterInstance(this);
     }
 
-    private void handlePlayerDeath(PlayerArenaDeathEvent event) {
+    private void handlePlayerOutOfArena(PlayerOutOfArenaEvent event) {
         ArenaPlayer player = (ArenaPlayer) event.getPlayer();
         switch (this.state) {
             case WAITING_FOR_PLAYERS, ENDING -> player.teleport(this.mapConfig.getSpectatorPosition());
@@ -197,15 +205,26 @@ public class ArenaImpl extends Arena {
                     return;
                 }
 
+                //Player Death
                 Integer pteam = this.playersTeamIds.get(player.getUuid());
                 Integer plifes = lifes[pteam];
 
+                EventDispatcher.call(new PlayerDeathEvent(player, pteam, plifes));
 
                 if (plifes == 0) {
                     //Death - Spectator
+                    this.playersTeamIds.remove(player.getUuid());
+
+                    if (!this.playersTeamIds.containsValue(pteam)) {
+                        //Team Eliminated
+                        EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player));
+                    }
                     player.sendMessage("You are now a spectator");
+
+                    //Spectator
+                    makePlayerSpectator(player);
                     return;
-                } else lifes[pteam] -= 1;
+                } else lifes[pteam] = plifes - 1;
 
                 //Todo: Figure out who killed who and add kills
 
@@ -221,11 +240,9 @@ public class ArenaImpl extends Arena {
         }
     }
 
-    private void changeArenaState(ArenaState state) {
-        ArenaState currentState = this.state;
-        EventDispatcher.call(new ArenaChangeStateEvent(this, currentState));
-
+    public void changeArenaState(ArenaState state) {
         this.state = state;
+        EventDispatcher.call(new ArenaChangeStateEvent(this, state));
     }
 
     public Map<UUID, Integer> getTeams() {
@@ -300,6 +317,7 @@ public class ArenaImpl extends Arena {
 
 
     public enum ArenaState {
+        LOADING,
         WAITING_FOR_PLAYERS,
         NORMAL_STARTING,
         INGAME,
@@ -335,14 +353,14 @@ public class ArenaImpl extends Arena {
                 sb.append(lifes[i]);
                 sb.append(" Players >");
                 if (players.size() == 0) sb.append("None");
-                else sb.append(players.size() == 1 ? players.get(0) : players.size());
+                else sb.append(players.size() == 1 ? players.get(0).getUsername() : players.size());
 
                 if (i > lifes.length - 1) sb.append(", ");
             }
             gameBar.name(Component.translatable(sb.toString()));
 
             seconds--;
-            if (seconds % 10 == 0) sendMessage(Component.translatable("ending in"));
+            if (seconds % 10 == 0) sendMessage(Component.translatable("ending in" + seconds));
         }
 
     }
@@ -388,14 +406,16 @@ public class ArenaImpl extends Arena {
         public void run() {
             if (state != ArenaState.ENDING) this.cancel();
             if (seconds == 0) {
-                getPlayers().forEach(player -> player.kick(""));
-                unregisterInstance();
+                List.copyOf(getPlayers()).forEach(player -> player.kick("Ended!"));
                 timer.cancel();
                 timer.purge();
+                unregisterInstance();
                 this.cancel();
             }
 
             sendMessage(Component.translatable("round.ending"));
+            gameBar.progress(seconds * 1F / roundEndingTime.getSeconds());
+            gameBar.name(Component.translatable("game.ending" + seconds));
             seconds--;
         }
 
