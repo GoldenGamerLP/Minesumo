@@ -12,6 +12,7 @@ import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
@@ -75,7 +76,7 @@ public class ArenaImpl extends Arena {
         node.addListener(PlayerLeaveArenaEvent.class, this::handlePlayerLeaveArenaEvent);
 
         EventListener<PlayerMoveEvent> moveEvent = EventListener.builder(PlayerMoveEvent.class)
-                .filter(ignored -> this.state.equals(ArenaState.NORMAL_STARTING))
+                .filter(ignored -> this.getState().equals(ArenaState.NORMAL_STARTING))
                 .filter(playerMoveEvent -> this.playerStates.get(playerMoveEvent.getPlayer().getUuid()).equals(PlayerState.ALIVE))
                 .handler(playerMoveEvent -> playerMoveEvent.setCancelled(true))
                 .build();
@@ -159,9 +160,9 @@ public class ArenaImpl extends Arena {
                 player.setGameMode(GameMode.ADVENTURE);
 
                 //Method --> areEnoughPlayers();
-                if (this.getPlayers().size() == getMaxPlayers()) {
+                if (getPlayers(PlayerState.ALIVE).size() == getMaxPlayers())
                     this.changeArenaState(ArenaState.NORMAL_STARTING);
-                }
+
             }
             case LOADING -> playerJoinArenaEvent.setCancelled(true);
         }
@@ -246,7 +247,7 @@ public class ArenaImpl extends Arena {
     }
 
     public ArenaState getState() {
-        return state.getAcquire();
+        return state.get();
     }
 
     public MapConfig getMapConfig() {
@@ -254,7 +255,7 @@ public class ArenaImpl extends Arena {
     }
 
     public int getMaxPlayers() {
-        return this.mapConfig.getGetSpawnPositions().size() * this.mapConfig.getPlayerPerSpawnPosition();
+        return this.mapConfig.getSpawnPositions().size() * this.mapConfig.getPlayerPerSpawnPosition();
     }
 
     public List<ArenaPlayer> getPlayers(PlayerState playerState) {
@@ -266,11 +267,12 @@ public class ArenaImpl extends Arena {
     }
 
     public void addPlayersToTeam() {
-        if (lifes.length != 0) return;
+        //if (this.lifes.length > 0) return;
+        log.info("Lifes: {}", (Object[]) lifes);
 
         List<List<ArenaPlayer>> teams = ListUtils.distributeNumbers(
                 this.getPlayers(PlayerState.ALIVE),
-                this.mapConfig.getGetSpawnPositions().size());
+                this.mapConfig.getSpawnPositions().size());
 
         this.lifes = new Integer[teams.size() + 1];
 
@@ -312,7 +314,7 @@ public class ArenaImpl extends Arena {
 
         //Ingame players
         int playerTeam = this.playersTeamIds.get(player.getUuid());
-        player.teleport(this.mapConfig.getGetSpawnPositions().get(playerTeam));
+        player.teleport(this.mapConfig.getSpawnPositions().get(playerTeam));
     }
 
     public List<Integer> getLivingTeams() {

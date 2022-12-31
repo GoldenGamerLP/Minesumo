@@ -17,7 +17,10 @@ public class RoundEndingTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.ENDING) this.cancel();
+        if (arena.getState() != ArenaImpl.ArenaState.ENDING) {
+            this.cancel();
+            return;
+        }
         if (seconds == 0) {
             arena.unregisterInstance();
             this.cancel();

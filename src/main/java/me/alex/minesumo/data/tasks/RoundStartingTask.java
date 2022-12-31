@@ -22,8 +22,10 @@ public class RoundStartingTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.NORMAL_STARTING)
+        if (arena.getState() != ArenaImpl.ArenaState.NORMAL_STARTING){
             this.cancel();
+            return;
+        }
 
         if (seconds == roundStartingTime.toSeconds()) {
             arena.addPlayersToTeam();
@@ -36,6 +38,8 @@ public class RoundStartingTask extends AbstractTask {
         }
         if (seconds == 0)
             arena.changeArenaState(ArenaImpl.ArenaState.INGAME);
+
+
 
 
         Component component = Component.translatable("starting.in");

@@ -33,7 +33,7 @@ public class MapConfig implements Cloneable {
 
     @SerializedName("spawnPositions")
     @Expose
-    private List<Pos> getSpawnPositions = new ArrayList<>();
+    private List<Pos> spawnPositions = new ArrayList<>();
 
     @SerializedName("deathLevel")
     @Expose

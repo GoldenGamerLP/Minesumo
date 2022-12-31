@@ -131,12 +131,12 @@ public class ArenaSetupCommand extends Command {
 
             MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
 
-            if (mapConfig.getGetSpawnPositions().isEmpty()) {
+            if (mapConfig.getSpawnPositions().isEmpty()) {
                 player.sendMessage("Set spawn positions before setting death level");
                 return;
             }
 
-            boolean wrongYLevel = mapConfig.getGetSpawnPositions().stream().anyMatch(pos -> pos.y() < yLevel);
+            boolean wrongYLevel = mapConfig.getSpawnPositions().stream().anyMatch(pos -> pos.y() < yLevel);
 
             if (wrongYLevel) {
                 player.sendMessage("The death level must be lower than the spawn positions.");
@@ -182,12 +182,12 @@ public class ArenaSetupCommand extends Command {
         }
 
         MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
-        if (mapConfig.getGetSpawnPositions().get(index) == null) {
+        if (mapConfig.getSpawnPositions().get(index) == null) {
             player.sendMessage("The spawn position at " + index + " is not available.");
             return;
         }
 
-        Pos before = mapConfig.getGetSpawnPositions().remove(index.intValue());
+        Pos before = mapConfig.getSpawnPositions().remove(index.intValue());
         player.sendMessage("Removed " + before + " with ID: " + index);
     }
 
@@ -202,8 +202,8 @@ public class ArenaSetupCommand extends Command {
         MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
 
         Pos pos = player.getPosition();
-        boolean isAdded = mapConfig.getGetSpawnPositions().add(pos);
-        int index = mapConfig.getGetSpawnPositions().indexOf(pos);
+        boolean isAdded = mapConfig.getSpawnPositions().add(pos);
+        int index = mapConfig.getSpawnPositions().indexOf(pos);
         player.sendMessage("Added a spawn at " + player.getPosition() + " with ID: " + index);
 
     }

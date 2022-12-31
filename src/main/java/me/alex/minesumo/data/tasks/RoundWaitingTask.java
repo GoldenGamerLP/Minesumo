@@ -11,8 +11,10 @@ public class RoundWaitingTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.WAITING_FOR_PLAYERS)
+        if (arena.getState() != ArenaImpl.ArenaState.WAITING_FOR_PLAYERS) {
             this.cancel();
+            return;
+        }
 
         if (arena.getMaxPlayers() == arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size())
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);

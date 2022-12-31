@@ -47,7 +47,7 @@ public class SchematicLoader {
                 log.warn("Map Name might not be null.");
                 return true;
             }
-            if (mapConfig.getGetSpawnPositions().size() == 0) {
+            if (mapConfig.getSpawnPositions().size() == 0) {
                 log.warn("Removing {} Map. Need more than two spawn positions!",
                         mapConfig.getMapName()
                 );

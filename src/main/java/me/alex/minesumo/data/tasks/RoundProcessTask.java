@@ -23,10 +23,14 @@ public class RoundProcessTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.INGAME) this.cancel();
+        if (arena.getState() != ArenaImpl.ArenaState.INGAME) {
+            this.cancel();
+            return;
+        }
         if (seconds == 0) {
             EventDispatcher.call(new ArenaEndEvent(arena, ArenaEndEvent.EndState.DRAW, arena.getPlayers(ArenaImpl.PlayerState.ALIVE), 0));
             arena.changeArenaState(ArenaImpl.ArenaState.ENDING);
+            this.cancel();
         }
 
         //Update scoreboards
