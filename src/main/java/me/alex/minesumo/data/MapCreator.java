@@ -1,5 +1,6 @@
 package me.alex.minesumo.data;
 
+import io.github.bloepiloepi.pvp.PvpExtension;
 import io.github.bloepiloepi.pvp.config.AttackConfig;
 import io.github.bloepiloepi.pvp.config.ExplosionConfig;
 import io.github.bloepiloepi.pvp.config.PvPConfig;
@@ -30,7 +31,7 @@ public class MapCreator {
 
         this.pvpEventNode = PvPConfig.emptyBuilder()
                 .attack(AttackConfig
-                        .emptyBuilder(false)
+                        .emptyBuilder(true)
                         .legacyKnockback(true)
                         .sounds(true)
                         .attackCooldown(false)
@@ -79,7 +80,8 @@ public class MapCreator {
         CompletableFuture<ArenaImpl> waitingCall = new CompletableFuture<>();
 
         //PVP events
-        instance.eventNode().addChild(this.pvpEventNode);
+        instance.eventNode().addChild(pvpEventNode);
+        instance.eventNode().addChild(PvpExtension.legacyEvents());
 
         //Creating queue for other instances
         this.activeCalls.put(mapConfig, new ArrayList<>(List.of(waitingCall)));

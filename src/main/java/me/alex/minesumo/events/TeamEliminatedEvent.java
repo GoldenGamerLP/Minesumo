@@ -1,5 +1,6 @@
 package me.alex.minesumo.events;
 
+import me.alex.minesumo.data.instances.ArenaImpl;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.trait.InstanceEvent;
 import net.minestom.server.instance.Instance;
@@ -11,7 +12,7 @@ public class TeamEliminatedEvent implements InstanceEvent {
     private final int teamID;
     private final Player lastDeathPlayerOfTeam;
 
-    public TeamEliminatedEvent(Instance instance, int teamID, Player lastDeathPlayerOfTeam) {
+    public TeamEliminatedEvent(ArenaImpl instance, int teamID, Player lastDeathPlayerOfTeam) {
         this.instance = instance;
         this.teamID = teamID;
         this.lastDeathPlayerOfTeam = lastDeathPlayerOfTeam;

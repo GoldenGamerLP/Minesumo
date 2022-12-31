@@ -51,7 +51,7 @@ public class GlobalEventListener {
 
             mpf.ifPresentOrElse(mapConfig -> {
                 minesumo.getMapManager().getAvailableMap(mapConfig, ArenaImpl.ArenaState.WAITING_FOR_PLAYERS).whenComplete((arena, throwable) -> {
-                    System.out.println(arena.getState());
+                    System.out.println(arena.getState() + " " + arena.getPlayers().size() + "");
                     minesumo.getMapManager().queueArena(playerLoginEvent.getPlayer(), arena);
                 });
             }, () -> playerLoginEvent.getPlayer().kick("No map found"));
@@ -76,12 +76,13 @@ public class GlobalEventListener {
             if (death.getNewPlayerPosition() != null) playerMoveEvent.setNewPosition(death.getNewPlayerPosition());
         });
 
-        gl.addListener(ArenaWinEvent.class, arenaWinEvent -> {
-            arenaWinEvent.getInstance().sendMessage(Component.text("Win! :" + arenaWinEvent.getTeamId()));
+        gl.addListener(ArenaEndEvent.class, arenaEndEvent -> {
+            arenaEndEvent.getInstance().sendMessage(Component.text(arenaEndEvent.getState() + "! :" + arenaEndEvent.getWinningPlayers()));
         });
 
         gl.addListener(TeamEliminatedEvent.class, event -> {
             event.getInstance().sendMessage(Component.text("Team death! :" + event.getTeamID()));
+
         });
 
         gl.addListener(PlayerDeathEvent.class, playerDeathEvent -> {

@@ -1,8 +1,12 @@
 package me.alex.minesumo.data.instances;
 
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import lombok.extern.log4j.Log4j2;
 import me.alex.minesumo.data.Arena;
 import me.alex.minesumo.data.ArenaPlayer;
 import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.tasks.*;
 import me.alex.minesumo.events.*;
 import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.bossbar.BossBar;
@@ -15,30 +19,33 @@ import net.minestom.server.event.EventListener;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.event.trait.InstanceEvent;
+import net.minestom.server.timer.TaskSchedule;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
+@Log4j2
 public class ArenaImpl extends Arena {
 
-    private static final Duration
-            roundStartingTime = Duration.ofSeconds(3),
+    public static final Duration
+            roundStartingTime = Duration.ofSeconds(5),
             roundProcessTime = Duration.ofMinutes(3),
-            roundEndingTime = Duration.ofSeconds(3);
+            roundEndingTime = Duration.ofSeconds(5);
 
     private static final int maxLifes = 0;
+    private final MapConfig mapConfig;
     private final Map<UUID, PlayerState> playerStates;
     private final Map<UUID, Integer> playersTeamIds;
-    private final MapConfig mapConfig;
-    private final TimerTask
-            roundWaitingPlayers,
-            roundStartingTask,
-            roundProcessTask,
-            roundEndingTask;
+    private final AbstractTask
+            roundWaitingPlayers = new RoundWaitingTask(this),
+            roundStartingTask = new RoundStartingTask(this),
+            roundProcessTask = new RoundProcessTask(this),
+            roundEndingTask = new RoundEndingTask(this);
     private final Timer timer;
     private final BossBar gameBar;
     private Integer[] lifes;
-    private ArenaState state = ArenaState.WAITING_FOR_PLAYERS;
+    private final AtomicReference<ArenaState> state = new AtomicReference<>(ArenaState.LOADING);
 
     public ArenaImpl(MinesumoInstance instance, MapConfig config) {
         super(UUID.randomUUID(), instance);
@@ -48,17 +55,8 @@ public class ArenaImpl extends Arena {
         this.timer = new Timer(this.getUniqueId().toString());
         this.gameBar = BossBar.bossBar(Component.empty(), 1F, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
 
-        this.playerStates = new HashMap<>();
-        this.playersTeamIds = new HashMap<>();
-
-
-        this.roundWaitingPlayers = new RoundWaitingTask();
-        this.roundStartingTask = new RoundStartingTask();
-        this.roundProcessTask = new RoundProcessTask();
-        this.roundEndingTask = new RoundEndingTask();
-
-
-        //Innit Teams, spawns, scoerboard, timers etc
+        this.playerStates = new Object2ObjectOpenHashMap<>();
+        this.playersTeamIds = new Object2IntArrayMap<>();
 
         registerListener();
 
@@ -75,12 +73,6 @@ public class ArenaImpl extends Arena {
         node.addListener(PlayerOutOfArenaEvent.class, this::handlePlayerOutOfArena);
         node.addListener(PlayerJoinArenaEvent.class, this::handlePlayerJoinArenaEvent);
         node.addListener(PlayerLeaveArenaEvent.class, this::handlePlayerLeaveArenaEvent);
-        node.addListener(TeamEliminatedEvent.class, teamEliminatedEvent -> {
-            if (this.playersTeamIds.values().stream().distinct().count() == 1) {
-                int teamID = (int) this.playersTeamIds.values().toArray()[0];
-                EventDispatcher.call(new ArenaWinEvent(getPlayers(teamID), teamID));
-            }
-        });
 
         EventListener<PlayerMoveEvent> moveEvent = EventListener.builder(PlayerMoveEvent.class)
                 .filter(ignored -> this.state.equals(ArenaState.NORMAL_STARTING))
@@ -127,22 +119,19 @@ public class ArenaImpl extends Arena {
             return;
         }
 
-        switch (this.state) {
-            case WAITING_FOR_PLAYERS -> {
-                //Do nothing?
-            }
+        if (this.getPlayers().size() == 0) {
+            this.unregisterInstance();
+        }
+
+        switch (getState()) {
             case NORMAL_STARTING -> {
-                this.changeArenaState(ArenaState.ENDING);
+                this.changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
                 //Draw
                 //Reset timer
             }
             case INGAME -> {
-                int team = this.getTeams().remove(player.getUuid());
+                int team = this.getTeams().get(player.getUuid());
                 if (getPlayers(team).size() == 0) EventDispatcher.call(new TeamEliminatedEvent(this, team, player));
-            }
-            case ENDING -> {
-                //If every player left, unregister instance
-
             }
         }
     }
@@ -154,22 +143,20 @@ public class ArenaImpl extends Arena {
 
         player.showBossBar(gameBar);
 
-        switch (this.state) {
-            case ENDING, NORMAL_STARTING, INGAME -> {
-                //Spectators only see spectators
-                makePlayerSpectator(player);
-            }
+        switch (getState()) {
+            case ENDING, NORMAL_STARTING, INGAME -> //Spectators only see spectators
+                    makePlayerSpectator(player);
 
             case WAITING_FOR_PLAYERS -> {
+                //register player
+                this.playerStates.put(player.getUuid(), PlayerState.ALIVE);
+
                 //Player can only see each other in a instance
                 player.setRespawnPoint(this.mapConfig.getSpectatorPosition());
                 player.teleport(this.mapConfig.getSpectatorPosition());
-                player.setAutoViewable(false);
+                player.updateViewerRule(entity -> true);
                 player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
-                player.setGameMode(GameMode.CREATIVE);
-
-                //register player
-                this.playerStates.put(player.getUuid(), PlayerState.ALIVE);
+                player.setGameMode(GameMode.ADVENTURE);
 
                 //Method --> areEnoughPlayers();
                 if (this.getPlayers().size() == getMaxPlayers()) {
@@ -182,7 +169,7 @@ public class ArenaImpl extends Arena {
 
     private void makePlayerSpectator(Player player) {
         player.setAutoViewable(false);
-        player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
+        player.updateViewableRule(player1 -> this.playerStates.get(player1.getUuid()).equals(PlayerState.ALIVE));
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(this.mapConfig.getSpectatorPosition());
 
@@ -191,17 +178,29 @@ public class ArenaImpl extends Arena {
     }
 
 
-    private void unregisterInstance() {
-        MinecraftServer.getInstanceManager().unregisterInstance(this);
+    public void unregisterInstance() {
+        getPlayers().forEach(player -> player.kick("Ended Arena"));
+
+        this.timer.cancel();
+        this.timer.purge();
+
+        this.playersTeamIds.clear();
+        this.playerStates.clear();
+
+        this.scheduler().scheduleTask(() -> {
+            log.info("Ended Arena {}", ArenaImpl.this.mapConfig.getMapName());
+
+            MinecraftServer.getInstanceManager().unregisterInstance(ArenaImpl.this);
+        }, TaskSchedule.millis(100), TaskSchedule.stop());
     }
 
     private void handlePlayerOutOfArena(PlayerOutOfArenaEvent event) {
         ArenaPlayer player = (ArenaPlayer) event.getPlayer();
-        switch (this.state) {
-            case WAITING_FOR_PLAYERS, ENDING -> player.teleport(this.mapConfig.getSpectatorPosition());
+        switch (getState()) {
+            case WAITING_FOR_PLAYERS, ENDING -> teleportPlayerToSpawn(player);
             case INGAME -> {
                 if (this.playerStates.get(player.getUuid()) == PlayerState.SPECTATOR) {
-                    event.setNewPlayerPosition(this.mapConfig.getSpectatorPosition());
+                    teleportPlayerToSpawn(player);
                     return;
                 }
 
@@ -209,39 +208,36 @@ public class ArenaImpl extends Arena {
                 Integer pteam = this.playersTeamIds.get(player.getUuid());
                 Integer plifes = lifes[pteam];
 
-                EventDispatcher.call(new PlayerDeathEvent(player, pteam, plifes));
+                EventDispatcher.call(new PlayerDeathEvent(this, player, pteam, plifes));
 
                 if (plifes == 0) {
-                    //Death - Spectator
-                    this.playersTeamIds.remove(player.getUuid());
+                    makePlayerSpectator(player);
 
-                    if (!this.playersTeamIds.containsValue(pteam)) {
+                    List<Integer> livingTeam = getLivingTeams();
+
+                    if (!livingTeam.contains(pteam))
                         //Team Eliminated
                         EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player));
-                    }
-                    player.sendMessage("You are now a spectator");
 
-                    //Spectator
-                    makePlayerSpectator(player);
-                    return;
+                    int size = livingTeam.size();
+                    if (size <= 1) {
+                        ArenaEndEvent.EndState state = size == 0 ? ArenaEndEvent.EndState.DRAW : ArenaEndEvent.EndState.WIN;
+                        List<ArenaPlayer> players = size == 0 ? getPlayers(PlayerState.ALIVE) : getPlayers(livingTeam.get(0));
+                        int teamID = size == 0 ? 0 : livingTeam.get(0);
+
+                        EventDispatcher.call(new ArenaEndEvent(this, state, players, teamID));
+                        this.changeArenaState(ArenaState.ENDING);
+                    }
                 } else lifes[pteam] = plifes - 1;
 
                 //Todo: Figure out who killed who and add kills
-
-                player.teleport(this.mapConfig.getGetSpawnPositions().get(pteam));
-                player.addDeath();
-                //Remove one life from the players
-                //Add a death to the team
-                //Add a point for the other players team
-
-                //Now remove a life
-
+                teleportPlayerToSpawn(player);
             }
         }
     }
 
     public void changeArenaState(ArenaState state) {
-        this.state = state;
+        this.state.set(state);
         EventDispatcher.call(new ArenaChangeStateEvent(this, state));
     }
 
@@ -250,7 +246,7 @@ public class ArenaImpl extends Arena {
     }
 
     public ArenaState getState() {
-        return state;
+        return state.getAcquire();
     }
 
     public MapConfig getMapConfig() {
@@ -269,8 +265,8 @@ public class ArenaImpl extends Arena {
                 .toList();
     }
 
-    private void addPlayersToTeam() {
-        if (this.state != ArenaState.NORMAL_STARTING) return;
+    public void addPlayersToTeam() {
+        if (lifes.length != 0) return;
 
         List<List<ArenaPlayer>> teams = ListUtils.distributeNumbers(
                 this.getPlayers(PlayerState.ALIVE),
@@ -281,6 +277,9 @@ public class ArenaImpl extends Arena {
 
         for (int team = 0; team < teams.size(); team++) {
             List<ArenaPlayer> players = teams.get(team);
+
+            //Skip empty teams
+            if (players.size() == 0) continue;
 
             //Leben in einem Team
             this.lifes[team] = maxLifes * players.size();
@@ -303,16 +302,41 @@ public class ArenaImpl extends Arena {
     }
 
     public void teleportPlayerToSpawn(Player player) {
-        if (!this.playerStates.containsKey(player.getUuid())) return;
-        if (!this.playersTeamIds.containsKey(player.getUuid())) {
+        if (!this.playerStates.containsKey(player.getUuid())
+                || !this.playersTeamIds.containsKey(player.getUuid())) {
             //Only specators
             player.teleport(this.mapConfig.getSpectatorPosition());
+            return;
         }
 
 
         //Ingame players
         int playerTeam = this.playersTeamIds.get(player.getUuid());
         player.teleport(this.mapConfig.getGetSpawnPositions().get(playerTeam));
+    }
+
+    public List<Integer> getLivingTeams() {
+        return playersTeamIds.entrySet()
+                .stream()
+                .filter(uuidIntegerEntry -> this.playerStates.get(uuidIntegerEntry.getKey()).equals(PlayerState.ALIVE))
+                .map(Map.Entry::getValue)
+                .distinct().toList();
+    }
+
+    public Map<UUID, PlayerState> getPlayerStates() {
+        return playerStates;
+    }
+
+    public Map<UUID, Integer> getPlayersTeamIds() {
+        return playersTeamIds;
+    }
+
+    public BossBar getGameBar() {
+        return gameBar;
+    }
+
+    public Integer[] getLifes() {
+        return lifes;
     }
 
 
@@ -328,98 +352,6 @@ public class ArenaImpl extends Arena {
     public enum PlayerState {
         SPECTATOR,
         ALIVE
-    }
-
-    private class RoundProcessTask extends TimerTask {
-
-        long seconds = roundProcessTime.toSeconds();
-
-        @Override
-        public void run() {
-            if (state != ArenaState.INGAME) this.cancel();
-            if (seconds == 0) {
-                changeArenaState(ArenaState.ENDING);
-                this.cancel();
-            }
-            //Update scoreboards
-            gameBar.progress((seconds * 1000F) / roundProcessTime.toMillis());
-
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < lifes.length; i++) {
-                List<ArenaPlayer> players = getPlayers(i);
-                sb.append("Team >");
-                sb.append(i);
-                sb.append(" Lifes >");
-                sb.append(lifes[i]);
-                sb.append(" Players >");
-                if (players.size() == 0) sb.append("None");
-                else sb.append(players.size() == 1 ? players.get(0).getUsername() : players.size());
-
-                if (i > lifes.length - 1) sb.append(", ");
-            }
-            gameBar.name(Component.translatable(sb.toString()));
-
-            seconds--;
-            if (seconds % 10 == 0) sendMessage(Component.translatable("ending in" + seconds));
-        }
-
-    }
-
-    private class RoundStartingTask extends TimerTask {
-
-        long seconds = roundStartingTime.toSeconds();
-
-        @Override
-        public void run() {
-            if (state != ArenaState.NORMAL_STARTING) this.cancel();
-            if (seconds == 0) {
-                addPlayersToTeam();
-                getPlayers().forEach(ArenaImpl.this::teleportPlayerToSpawn);
-                getPlayers(PlayerState.ALIVE).forEach(player -> player.addHistory(ArenaImpl.this.stats));
-
-                changeArenaState(ArenaState.INGAME);
-                this.cancel();
-            }
-
-            gameBar.name(Component.translatable("starting.in" + seconds));
-            sendMessage(Component.translatable("starting.in"));
-
-            seconds--;
-        }
-
-    }
-
-    private class RoundWaitingTask extends TimerTask {
-
-        @Override
-        public void run() {
-            sendMessage(Component.translatable("waiting.players"));
-            if (state != ArenaState.WAITING_FOR_PLAYERS) this.cancel();
-        }
-    }
-
-    private class RoundEndingTask extends TimerTask {
-
-        long seconds = roundEndingTime.getSeconds();
-
-        @Override
-        public void run() {
-            if (state != ArenaState.ENDING) this.cancel();
-            if (seconds == 0) {
-                List.copyOf(getPlayers()).forEach(player -> player.kick("Ended!"));
-                timer.cancel();
-                timer.purge();
-                unregisterInstance();
-                this.cancel();
-            }
-
-            sendMessage(Component.translatable("round.ending"));
-            gameBar.progress(seconds * 1F / roundEndingTime.getSeconds());
-            gameBar.name(Component.translatable("game.ending" + seconds));
-            seconds--;
-        }
-
-
     }
 
 }
