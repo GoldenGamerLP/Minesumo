@@ -24,12 +24,13 @@ dependencies {
 
 
     implementation 'scaffolding:core:unspecified'
-    implementation 'com.github.TogAr2:MinestomPvP:713f5be93b'
-    compileOnly 'com.github.Minestom.Minestom:Minestom:eb06ba8664'
+    implementation 'com.github.TogAr2:MinestomPvP:fd7baf69c9'
+    compileOnly 'com.github.Minestom.Minestom:Minestom:24cc458659'
     //implementation 'org.aeonbits.owner:owner:1.0.12'
     //implementation 'me.hsgamer:hscore-minestom-board:4.1.33'
     implementation 'org.apache.logging.log4j:log4j-api:2.19.0'
     implementation 'org.apache.logging.log4j:log4j-core:2.19.0'
+    implementation("com.github.hollow-cube.common:schem:935bb279e6")
 
 
     compileOnly 'org.projectlombok:lombok:1.18.24'

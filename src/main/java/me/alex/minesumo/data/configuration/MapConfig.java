@@ -39,6 +39,10 @@ public class MapConfig implements Cloneable {
     @Expose
     private Double deathLevel = 0.0D;
 
+    @SerializedName("startingLives")
+    @Expose
+    private Integer startingLives = 0;
+
     @SerializedName("spectatorPosition")
     @Expose
     private Pos spectatorPosition = Pos.ZERO;

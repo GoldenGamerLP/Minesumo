@@ -1,10 +1,11 @@
 package me.alex.minesumo.data.tasks;
 
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 
-import static me.alex.minesumo.data.instances.ArenaImpl.roundEndingTime;
+import static me.alex.minesumo.instances.AbstractArena.roundEndingTime;
 
 public class RoundEndingTask extends AbstractTask {
     private long seconds;
@@ -21,16 +22,18 @@ public class RoundEndingTask extends AbstractTask {
             this.cancel();
             return;
         }
-        if (seconds == 0) {
+        if (seconds == 0)
             arena.unregisterInstance();
-            this.cancel();
-        }
 
-        arena.sendMessage(Component.translatable("round.ending"));
+        Component translated = Messages.GAME_ENDING.toTranslatable(Component.text(seconds));
+
+        if (seconds % 10 == 0 || seconds <= 3)
+            arena.sendMessage(translated);
 
         BossBar bar = arena.getGameBar();
         bar.progress(seconds * 1F / roundEndingTime.getSeconds());
-        bar.name(Component.translatable("game.ending" + seconds));
+        bar.name(translated);
+        bar.color(BossBar.Color.RED);
 
         seconds--;
     }

@@ -1,18 +1,21 @@
 package me.alex.minesumo.data.tasks;
 
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.title.TitlePart;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.title.Title;
 import net.minestom.server.entity.Player;
 
 import java.util.List;
 
-import static me.alex.minesumo.data.instances.ArenaImpl.roundStartingTime;
+import static me.alex.minesumo.instances.AbstractArena.roundStartingTime;
 
 public class RoundStartingTask extends AbstractTask {
 
-    private volatile long seconds;
+    private long seconds;
 
     public RoundStartingTask(ArenaImpl arena) {
         super(arena);
@@ -22,7 +25,7 @@ public class RoundStartingTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.NORMAL_STARTING){
+        if (arena.getState() != ArenaImpl.ArenaState.NORMAL_STARTING) {
             this.cancel();
             return;
         }
@@ -36,23 +39,29 @@ public class RoundStartingTask extends AbstractTask {
                 arena.sendMessage(Component.translatable("Team: " + integer + " | Players: " + players));
             });
         }
-        if (seconds == 0)
+        if (seconds == 0) {
             arena.changeArenaState(ArenaImpl.ArenaState.INGAME);
+            arena.resetTitle();
+        }
+
+        float percent = seconds * 1F / roundStartingTime.toSeconds();
+        Component component = Messages.GAME_STARTING.toTranslatable(Component.text(seconds));
 
 
-
-
-        Component component = Component.translatable("starting.in");
-        if (seconds <= 3) arena.getPlayers(ArenaImpl.PlayerState.ALIVE).forEach(arenaPlayer -> {
-            arenaPlayer.sendTitlePart(TitlePart.TITLE, component);
-            arenaPlayer.sendTitlePart(TitlePart.SUBTITLE, Component.text(seconds));
-        });
+        if (seconds <= 3) {
+            Title title = Title.title(
+                    Messages.GAME_STARTING_TITLE.toTranslatable()
+                            .color(TextColor.lerp(percent, NamedTextColor.GREEN, NamedTextColor.RED)),
+                    Component.text(seconds));
+            arena.showTitle(title);
+        }
 
         BossBar bar = arena.getGameBar();
-        bar.name(Component.translatable("starting.in" + seconds));
-        bar.progress(seconds * 1F / roundStartingTime.toSeconds());
+        bar.name(component);
+        bar.progress(percent);
+        bar.color(BossBar.Color.GREEN);
 
-        arena.sendMessage(Component.translatable("starting.in" + seconds));
+        arena.sendActionBar(component);
 
         seconds--;
     }

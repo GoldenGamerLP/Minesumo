@@ -1,16 +1,12 @@
-package me.alex.minesumo.data;
+package me.alex.minesumo.map;
 
-import io.github.bloepiloepi.pvp.PvpExtension;
-import io.github.bloepiloepi.pvp.config.AttackConfig;
-import io.github.bloepiloepi.pvp.config.ExplosionConfig;
-import io.github.bloepiloepi.pvp.config.PvPConfig;
+import dev.hypera.scaffolding.instance.SchematicChunkLoader;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.instances.ArenaImpl;
-import me.alex.minesumo.data.instances.MinesumoInstance;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.instances.MinesumoInstance;
 import net.minestom.server.coordinate.Pos;
-import net.minestom.server.event.EventNode;
-import net.minestom.server.event.trait.EntityInstanceEvent;
+import net.minestom.server.instance.IChunkLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,27 +15,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class MapCreator {
-
     private final ConcurrentMap<MapConfig, MinesumoInstance> activeMaps;
     private final ConcurrentMap<MapConfig, List<CompletableFuture<ArenaImpl>>> activeCalls;
     private final Pos pastePos = new Pos(0, 64, 0);
-    private final EventNode<EntityInstanceEvent> pvpEventNode;
 
     public MapCreator(Minesumo minesumo) {
         this.activeMaps = new ConcurrentHashMap<>();
         this.activeCalls = new ConcurrentHashMap<>();
 
-        this.pvpEventNode = PvPConfig.emptyBuilder()
-                .attack(AttackConfig
-                        .emptyBuilder(true)
-                        .legacyKnockback(true)
-                        .sounds(true)
-                        .attackCooldown(false)
-                        .damageIndicatorParticles(true)
-                        .spectating(true)
-                ).explosion(ExplosionConfig.DEFAULT)
-                .build().createNode();
+        minesumo.getSchematicLoader().getLoadedMapConfigs().forEach(mapConfig -> {
+            MinesumoInstance instance = activeMaps.computeIfAbsent(mapConfig, mapConfig1 ->
+                            new MinesumoInstance(mapConfig));
 
+            IChunkLoader loader = SchematicChunkLoader.builder()
+                    .addSchematic(mapConfig.getMapSchematic())
+                    .saveHandler(chunk -> CompletableFuture.completedFuture(null))
+                    .offset(pastePos.blockX(),pastePos.blockY(),pastePos.blockZ())
+                    .build();
+
+            instance.setChunkLoader(loader);
+            System.out.println("Created map!");
+        });
     }
 
     public CompletableFuture<MinesumoInstance> getEditorMap(MapConfig mapConfig) {
@@ -48,6 +44,10 @@ public class MapCreator {
             mapConfig.getMapSchematic().build(instance, pastePos).join();
             return instance;
         });
+    }
+
+    public ArenaImpl getMapNow(MapConfig config) {
+        return this.activeMaps.get(config).createCopy();
     }
 
 
@@ -79,15 +79,18 @@ public class MapCreator {
 
         CompletableFuture<ArenaImpl> waitingCall = new CompletableFuture<>();
 
-        //PVP events
-        instance.eventNode().addChild(pvpEventNode);
-        instance.eventNode().addChild(PvpExtension.legacyEvents());
-
         //Creating queue for other instances
         this.activeCalls.put(mapConfig, new ArrayList<>(List.of(waitingCall)));
 
         //Pasting schematic, after pasted complete every request and give back shared instance
-        mapConfig.getMapSchematic().build(instance, pastePos).thenAcceptAsync(region -> {
+        IChunkLoader loader = SchematicChunkLoader.builder()
+                .addSchematic(mapConfig.getMapSchematic())
+                .saveHandler(chunk -> CompletableFuture.completedFuture(null))
+                .offset(pastePos.blockX(),pastePos.blockY(),pastePos.blockZ())
+                .build();
+
+        instance.setChunkLoader(loader);
+        instance.scheduleNextTick(instance1 -> {
             activeCalls.get(mapConfig).forEach(queue -> queue.complete(instance.createCopy()));
             activeCalls.remove(mapConfig).clear();
         });

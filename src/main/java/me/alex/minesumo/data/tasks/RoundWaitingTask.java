@@ -1,7 +1,12 @@
 package me.alex.minesumo.data.tasks;
 
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.messages.Messages;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.minestom.server.entity.Player;
+
+import java.util.List;
 
 public class RoundWaitingTask extends AbstractTask {
 
@@ -19,6 +24,18 @@ public class RoundWaitingTask extends AbstractTask {
         if (arena.getMaxPlayers() == arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size())
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
 
-        arena.sendMessage(Component.translatable("waiting.players"));
+
+        List<Player> player = arena.getPlayers(ArenaImpl.PlayerState.ALIVE);
+        int maxPlayers = arena.getMaxPlayers();
+
+        float percentage = player.size() * 1F / maxPlayers;
+        int needed = maxPlayers - player.size();
+
+        BossBar bar = arena.getGameBar();
+        bar.progress(percentage);
+        bar.name(Messages.GAME_WAITING_PLAYERS.toTranslatable(Component.text(needed)));
+        bar.color(BossBar.Color.YELLOW);
+
+        arena.sendActionBar(Messages.GAME_WAITING.toTranslatable());
     }
 }

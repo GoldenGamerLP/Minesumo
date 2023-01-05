@@ -1,9 +1,8 @@
-package me.alex.minesumo.manager;
+package me.alex.minesumo.map;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.MapCreator;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 
@@ -11,10 +10,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public class MapManager {
+public class MapSelector {
 
     public static final Predicate<MapConfig> ALL_MAPS;
 
@@ -24,10 +24,13 @@ public class MapManager {
 
     private final List<MapConfig> availableMapConfigs;
     private final MapCreator mapCreator;
+    private final ThreadLocalRandom localRandom;
 
-    public MapManager(Minesumo minesumo) {
+    public MapSelector(Minesumo minesumo) {
         this.availableMapConfigs = minesumo.getSchematicLoader().getLoadedMapConfigs();
         this.mapCreator = minesumo.getMapCreator();
+
+        this.localRandom = ThreadLocalRandom.current();
     }
 
     /**
@@ -38,11 +41,23 @@ public class MapManager {
      * @return A MapConfig or none if nothing was found.
      */
     public Optional<MapConfig> selectMap(Predicate<MapConfig> selection, MapSelectionStrategy selectionStrategy) {
+        if(availableMapConfigs.size() == 0) return Optional.empty();
+
         Stream<MapConfig> stream = availableMapConfigs.stream().filter(selection);
+
         return switch (selectionStrategy) {
             case ANY_RESULT -> stream.findAny();
+            case RANDOM_RESULT -> {
+                List<MapConfig> config = stream.toList();
+                int nextRandom = localRandom.nextInt(config.size());
+                yield Optional.ofNullable(config.get(nextRandom));
+            }
             case FIRST_RESULT -> stream.findFirst();
         };
+    }
+
+    public ArenaImpl test(MapConfig config) {
+        return mapCreator.getMapNow(config);
     }
 
     /**
@@ -84,13 +99,7 @@ public class MapManager {
 
     public enum MapSelectionStrategy {
         ANY_RESULT,
+        RANDOM_RESULT,
         FIRST_RESULT
     }
-
-    public enum JoinMapStrategy {
-        ALREADY_EXISTING,
-        NEW_ARENA
-    }
-
-
 }

@@ -1,13 +1,15 @@
-package me.alex.minesumo.data;
+package me.alex.minesumo.data.statistics;
 
 import com.google.gson.annotations.Expose;
 import kotlin.Pair;
+import lombok.Data;
 import lombok.Getter;
 
 import java.time.Instant;
 import java.util.*;
 
-class ArenaStatistics {
+@Data
+public final class ArenaStatistics {
 
     @Expose
     @Getter
@@ -19,17 +21,22 @@ class ArenaStatistics {
 
     @Expose
     @Getter
-    Instant timestamp;
+    Instant start, stop;
 
     @Expose
     @Getter
     Map<Instant, Pair<UUID, UUID>> killsAndDeathHistory;
 
-    ArenaStatistics(UUID uuid) {
+    public ArenaStatistics(UUID uuid) {
         this.sessionID = uuid;
 
         this.participants = new ArrayList<>();
         this.killsAndDeathHistory = new HashMap<>();
-        this.timestamp = Instant.now();
+        this.start = Instant.now();
+    }
+
+    public ArenaStatistics close() {
+        this.stop = Instant.now();
+        return this;
     }
 }

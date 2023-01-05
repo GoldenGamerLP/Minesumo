@@ -1,20 +1,21 @@
-package me.alex.minesumo.data.instances;
+package me.alex.minesumo.instances;
 
+import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.utils.DefaultInstanceSettings;
+import me.alex.minesumo.utils.FullbrightDimension;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceContainer;
 
 import java.time.Duration;
 import java.util.UUID;
 
-// TODO: Remove this class and only use eventnode
+@Slf4j
 public class MinesumoInstance extends InstanceContainer {
 
     private final MapConfig config;
 
     public MinesumoInstance(MapConfig config) {
-        super(UUID.randomUUID(), DefaultInstanceSettings.DEFAULT_DIM);
+        super(UUID.randomUUID(), FullbrightDimension.DEFAULT_DIM);
 
         this.config = config;
         //
@@ -22,6 +23,8 @@ public class MinesumoInstance extends InstanceContainer {
         registerBasicListener();
         //Register
         MinecraftServer.getInstanceManager().registerInstance(this);
+
+        log.info("Registered Map {}", config.getSchematicFile());
     }
 
     private void basicArenaSetup() {

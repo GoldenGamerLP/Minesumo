@@ -1,22 +1,24 @@
 package me.alex.minesumo.events;
 
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.trait.InstanceEvent;
 import net.minestom.server.instance.Instance;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PlayerDeathEvent implements InstanceEvent {
 
-    private final Player player;
+    private final Player player, attacker;
     private final int teamId;
 
     private final int leftLifes;
 
     private final Instance instance;
 
-    public PlayerDeathEvent(ArenaImpl instance, Player player, int teamId, int leftLifes) {
+    public PlayerDeathEvent(ArenaImpl instance, Player player, @Nullable Player attacker, int teamId, int leftLifes) {
         this.player = player;
+        this.attacker = attacker;
         this.teamId = teamId;
         this.leftLifes = leftLifes;
         this.instance = instance;
@@ -32,6 +34,10 @@ public class PlayerDeathEvent implements InstanceEvent {
 
     public int getLeftLifes() {
         return leftLifes;
+    }
+
+    public Player getAttacker() {
+        return attacker;
     }
 
     @Override

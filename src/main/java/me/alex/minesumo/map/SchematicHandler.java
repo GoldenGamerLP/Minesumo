@@ -1,12 +1,12 @@
-package me.alex.minesumo.data;
+package me.alex.minesumo.map;
 
 import dev.hypera.scaffolding.Scaffolding;
 import dev.hypera.scaffolding.schematic.Schematic;
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.configuration.MinesumoMainConfig;
-import me.alex.minesumo.data.instances.MinesumoInstance;
+import me.alex.minesumo.data.configuration.MinesumoMapConfig;
+import me.alex.minesumo.instances.MinesumoInstance;
 import org.jetbrains.annotations.NotNull;
 import org.jglrxavpok.hephaistos.nbt.NBTException;
 
@@ -20,25 +20,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
 @Slf4j
-public class SchematicLoader {
+public class SchematicHandler {
 
-    private final MinesumoMainConfig config;
+    private final MinesumoMapConfig config;
     private final Path schematicFolder;
-    private final Predicate<MapConfig> mapConfigPredicate;
+    private final Predicate<MapConfig> mapValidator;
 
     private final CopyOnWriteArrayList<MapConfig> loadedMapConfigs;
 
     private final Minesumo minesumo;
 
-    public SchematicLoader(Minesumo minesumo) {
-        this.config = minesumo.getConfig();
+    public SchematicHandler(Minesumo minesumo) {
+        this.config = minesumo.getMapConfig();
         this.loadedMapConfigs = new CopyOnWriteArrayList<>();
         //Todo: Replace the schematics with the config value
         this.schematicFolder = minesumo.getDataDirectory().resolve("schematics");
         this.schematicFolder.toFile().mkdir();
         this.minesumo = minesumo;
 
-        this.mapConfigPredicate = mapConfig -> {
+        this.mapValidator = mapConfig -> {
             if (mapConfig == null) {
                 log.warn("Map Configuration is null.");
                 return true;
@@ -92,9 +92,9 @@ public class SchematicLoader {
     @SuppressWarnings("unchecked")
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
-        Set<MapConfig> currentConfigs = config.getMaps();
+        Set<MapConfig> currentConfigs = config.getConfigurations();
         log.info("Found {} maps!", currentConfigs.size());
-        currentConfigs.removeIf(this.mapConfigPredicate);
+        currentConfigs.removeIf(this.mapValidator);
         log.info("After cleanup found {} maps!", currentConfigs.size());
 
         //Parallel loading of maps
@@ -125,7 +125,6 @@ public class SchematicLoader {
     }
 
     public List<MapConfig> getLoadedMapConfigs() {
-        log.info("There are {} loaded schematics", this.loadedMapConfigs.size());
         return List.copyOf(loadedMapConfigs);
     }
 

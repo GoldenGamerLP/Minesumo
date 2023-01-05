@@ -1,15 +1,16 @@
 package me.alex.minesumo.data.tasks;
 
-import me.alex.minesumo.data.ArenaPlayer;
-import me.alex.minesumo.data.instances.ArenaImpl;
 import me.alex.minesumo.events.ArenaEndEvent;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 
 import java.util.List;
 
-import static me.alex.minesumo.data.instances.ArenaImpl.roundProcessTime;
+import static me.alex.minesumo.instances.AbstractArena.roundProcessTime;
 
 public class RoundProcessTask extends AbstractTask {
 
@@ -35,13 +36,13 @@ public class RoundProcessTask extends AbstractTask {
 
         //Update scoreboards
         StringBuilder sb = new StringBuilder();
-        Integer[] lifes = arena.getLifes();
+        Integer[] lifes = arena.getLives();
 
         for (Integer livingTeam : arena.getLivingTeams()) {
-            List<ArenaPlayer> players = arena.getPlayers(livingTeam);
+            List<Player> players = arena.getPlayers(livingTeam);
             sb.append("Team: ");
             sb.append(livingTeam);
-            sb.append(" - Lifes: ");
+            sb.append(" - Lives: ");
             sb.append(lifes[livingTeam]);
             sb.append(" - Players:");
             if (players.size() == 0) sb.append("None");
@@ -53,9 +54,10 @@ public class RoundProcessTask extends AbstractTask {
         BossBar bar = arena.getGameBar();
         bar.name(Component.translatable(sb.toString()));
         bar.progress((seconds * 1000F) / roundProcessTime.toMillis());
+        bar.color(BossBar.Color.WHITE);
 
-        if (seconds % 10 == 0 || seconds <= 5)
-            arena.sendMessage(Component.translatable("ending.in" + seconds));
+        if (seconds % 10 == 0 || seconds <= 3)
+            arena.sendMessage(Messages.GAME_ENDING.toTranslatable(Component.text(seconds)));
 
         seconds--;
     }

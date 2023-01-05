@@ -1,6 +1,6 @@
 package me.alex.minesumo.data.tasks;
 
-import me.alex.minesumo.data.instances.ArenaImpl;
+import me.alex.minesumo.instances.ArenaImpl;
 
 import java.util.TimerTask;
 

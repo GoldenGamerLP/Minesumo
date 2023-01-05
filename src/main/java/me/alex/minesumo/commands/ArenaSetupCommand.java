@@ -2,7 +2,7 @@ package me.alex.minesumo.commands;
 
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.instances.MinesumoInstance;
+import me.alex.minesumo.instances.MinesumoInstance;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
@@ -159,7 +159,7 @@ public class ArenaSetupCommand extends Command {
             }
 
             MapConfig config = this.activeMaps.remove(player.getUuid()).getConfig();
-            minesumo.getConfig().getMaps().add(config);
+            minesumo.getMapConfig().getConfigurations().add(config);
             player.sendMessage("Please restart to ensure using the config correctly. \n You can settup another arena.");
             MinecraftServer.stopCleanly();
         }, save);

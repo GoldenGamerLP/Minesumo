@@ -1,24 +1,30 @@
 package me.alex.minesumo.listener;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.ArenaPlayer;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.instances.ArenaImpl;
 import me.alex.minesumo.events.*;
-import me.alex.minesumo.manager.MapManager;
+import me.alex.minesumo.instances.ArenaImpl;
+import me.alex.minesumo.map.MapSelector;
+import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
+import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.instance.AddEntityToInstanceEvent;
 import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent;
 import net.minestom.server.event.player.PlayerLoginEvent;
 import net.minestom.server.event.player.PlayerMoveEvent;
+import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class GlobalEventListener {
 
@@ -28,69 +34,103 @@ public class GlobalEventListener {
         GlobalEventHandler gl = MinecraftServer.getGlobalEventHandler();
 
         container = MinecraftServer.getInstanceManager().createInstanceContainer();
-        container.setGenerator(unit -> unit.modifier().fillHeight(0, 2, Block.STONE));
+        container.setGenerator(unit -> unit.modifier().fillHeight(0, 1, Block.STONE));
 
         boolean isEditorMode = minesumo.getConfig().getIsInEditorMode();
 
-        if (isEditorMode) gl.addListener(RemoveEntityFromInstanceEvent.class, removeEntityFromInstanceEvent -> {
-            if (removeEntityFromInstanceEvent.getInstance() instanceof ArenaImpl arenaImpl
-                    && removeEntityFromInstanceEvent.getEntity() instanceof Player player) {
-                gl.call(new PlayerLeaveArenaEvent(arenaImpl, player));
-            }
+        gl.addListener(RemoveEntityFromInstanceEvent.class, event -> {
+            if (!(event.getInstance() instanceof ArenaImpl arenaImpl)) return;
+            if (!(event.getEntity() instanceof Player player)) return;
+            EventDispatcher.call(new PlayerLeaveArenaEvent(arenaImpl, player));
         });
 
         gl.addListener(PlayerLoginEvent.class, playerLoginEvent -> {
-            playerLoginEvent.setSpawningInstance(container);
+            Player player = playerLoginEvent.getPlayer();
 
-            if (isEditorMode) {
-                playerLoginEvent.getPlayer().setGameMode(GameMode.CREATIVE);
+            if (!minesumo.hasStarted()) {
+                player.kick("Not loaded yet.");
                 return;
             }
 
-            Optional<MapConfig> mpf = minesumo.getMapManager().selectMap(MapManager.ALL_MAPS, MapManager.MapSelectionStrategy.ANY_RESULT);
+
+            if (isEditorMode) {
+                player.setGameMode(GameMode.CREATIVE);
+                playerLoginEvent.setSpawningInstance(container);
+                return;
+            }
+
+            Optional<MapConfig> mpf = minesumo
+                    .getMapManager()
+                    .selectMap(MapSelector.ALL_MAPS, MapSelector.MapSelectionStrategy.RANDOM_RESULT);
 
             mpf.ifPresentOrElse(mapConfig -> {
-                minesumo.getMapManager().getAvailableMap(mapConfig, ArenaImpl.ArenaState.WAITING_FOR_PLAYERS).whenComplete((arena, throwable) -> {
-                    System.out.println(arena.getState() + " " + arena.getPlayers().size() + "");
-                    minesumo.getMapManager().queueArena(playerLoginEvent.getPlayer(), arena);
-                });
-            }, () -> playerLoginEvent.getPlayer().kick("No map found"));
+                playerLoginEvent.setSpawningInstance(minesumo.getMapManager().test(mapConfig));
+            }, () -> player.kick("No map found"));
         });
 
-        gl.addListener(AddEntityToInstanceEvent.class, addEntityToInstanceEvent -> {
-            if (addEntityToInstanceEvent.getInstance() instanceof ArenaImpl arenaImpl
-                    && addEntityToInstanceEvent.getEntity() instanceof Player player) {
-                PlayerJoinArenaEvent event = new PlayerJoinArenaEvent(arenaImpl, player);
-                gl.call(event);
-                addEntityToInstanceEvent.setCancelled(event.isCancelled());
-            }
+        gl.addListener(AddEntityToInstanceEvent.class, event -> {
+            if (!(event.getInstance() instanceof ArenaImpl impl)) return;
+            if (!(event.getEntity() instanceof Player player)) return;
+
+            PlayerJoinArenaEvent ev = new PlayerJoinArenaEvent(impl, player);
+            EventDispatcher.call(ev);
+            event.setCancelled(event.isCancelled());
+
         });
 
-        if (!isEditorMode) gl.addListener(PlayerMoveEvent.class, playerMoveEvent -> {
-            if (!(playerMoveEvent.getInstance() instanceof ArenaImpl arenaImpl)) return;
-            if (!(playerMoveEvent.getNewPosition().y() <= arenaImpl.getMapConfig().getDeathLevel())) return;
+        if (!isEditorMode) gl.addListener(PlayerMoveEvent.class, moveEvent -> {
+            if (!(moveEvent.getInstance() instanceof ArenaImpl arenaImpl)) return;
+            if (!(moveEvent.getNewPosition().y() <= arenaImpl.getMapConfig().getDeathLevel())) return;
 
 
-            PlayerOutOfArenaEvent death = new PlayerOutOfArenaEvent(playerMoveEvent.getPlayer(), arenaImpl);
-            gl.call(death);
-            if (death.getNewPlayerPosition() != null) playerMoveEvent.setNewPosition(death.getNewPlayerPosition());
+            PlayerOutOfArenaEvent death = new PlayerOutOfArenaEvent(moveEvent.getPlayer(), arenaImpl);
+            EventDispatcher.call(death);
+            if (death.getNewPlayerPosition() != null) moveEvent.setNewPosition(death.getNewPlayerPosition());
         });
 
-        gl.addListener(ArenaEndEvent.class, arenaEndEvent -> {
-            arenaEndEvent.getInstance().sendMessage(Component.text(arenaEndEvent.getState() + "! :" + arenaEndEvent.getWinningPlayers()));
+        gl.addListener(ArenaEndEvent.class, event -> {
+            Instance instance = event.getInstance();
+            Component component;
+
+            if (event.getState() == ArenaEndEvent.EndState.WIN) {
+                String player = event.getWinningPlayers()
+                        .stream()
+                        .map(Player::getUsername)
+                        .toList()
+                        .toString();
+
+                component = Messages.GAME_WIN.toTranslatable(
+                        Component.text(event.getTeamId()),
+                        Component.text(player));
+
+            } else component = Messages.GAME_DRAW.toTranslatable();
+
+            instance.sendMessage(component);
         });
 
         gl.addListener(TeamEliminatedEvent.class, event -> {
-            event.getInstance().sendMessage(Component.text("Team death! :" + event.getTeamID()));
+            Instance instance = event.getInstance();
+            Component component = Messages.GAME_TEAM_DEATH.toTranslatable(
+                    Component.text(event.getTeamID()),
+                    Component.text(event.getLastDeathPlayerOfTeam().getUsername()));
 
+            instance.sendMessage(component);
         });
 
-        gl.addListener(PlayerDeathEvent.class, playerDeathEvent -> {
-            playerDeathEvent.getInstance().sendMessage(Component.text("Player Death! :" + playerDeathEvent.getPlayer().getUsername()));
-        });
+        gl.addListener(PlayerDeathEvent.class, event -> {
+            ArenaImpl instance = (ArenaImpl) event.getInstance();
+            String user = event.getPlayer().getUsername();
 
-        //Todo: Handle saving of player
-        MinecraftServer.getConnectionManager().setPlayerProvider(ArenaPlayer::new);
+            Component component;
+            if (event.getAttacker() != null)
+                component = Messages.GAME_DEATH_PLAYER.toTranslatable(
+                        Component.text(user),
+                        Component.text(event.getAttacker().getUsername()));
+            else component = Messages.GAME_DEATH
+                    .toTranslatable(Component.text(user));
+
+            instance.sendMessage(component);
+        });
 
 
         if (!isEditorMode)

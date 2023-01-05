@@ -61,7 +61,7 @@ public final class JsonConfigurationLoader<T> {
     public JsonConfigurationLoader<T> load() {
         try {
             if (!file.exists()) {
-                log.info("Creating [{}] File successfully: {}", this.file, createFileIfNotExists());
+                log.info("Creating [{}] file successfully: {}", this.file, createFileIfNotExists());
                 gsonObject = of.getDeclaredConstructor().newInstance();
                 writeToFile();
             } else readFromFile();
