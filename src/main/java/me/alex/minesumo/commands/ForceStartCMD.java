@@ -36,7 +36,7 @@ public class ForceStartCMD extends Command {
                 return;
             }
 
-            if (arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size() < 2) {
+            if (arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).size() < 2) {
                 player.sendMessage(Messages
                         .GAME_COMMAND_FAILURE_PLAYERS
                         .toTranslatable(Component.text(MIN_PLAYER_START)));

@@ -21,11 +21,11 @@ public class RoundWaitingTask extends AbstractTask {
             return;
         }
 
-        if (arena.getMaxPlayers() == arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size())
+        if (arena.getMaxPlayers() == arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).size())
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
 
 
-        List<Player> player = arena.getPlayers(ArenaImpl.PlayerState.ALIVE);
+        List<Player> player = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
         int maxPlayers = arena.getMaxPlayers();
 
         float percentage = player.size() * 1F / maxPlayers;

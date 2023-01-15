@@ -87,7 +87,7 @@ public class GlobalEventListener {
             } else component = Messages.GAME_DRAW.toTranslatable();
 
             statsMng.arenaEnd(instance.getGameID(), event.getState(), event.getWinningPlayers());
-            instance.getPlayers(ArenaImpl.PlayerState.ALIVE).forEach(pls -> minesumo.getStatsHandler()
+            instance.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).forEach(pls -> minesumo.getStatsHandler()
                     .getPlayerCache()
                     .getIfPresent(pls.getUuid()).thenAccept(pl -> {
 
@@ -136,7 +136,7 @@ public class GlobalEventListener {
         gl.addListener(ArenaChangeStateEvent.class, event -> {
             ArenaImpl impl = event.getArena();
             if (event.getState() == ArenaImpl.ArenaState.NORMAL_STARTING) {
-                statsMng.startGame(impl.getGameID(), impl.getPlayers(ArenaImpl.PlayerState.ALIVE));
+                statsMng.startGame(impl.getGameID(), impl.getPlayerFromState(ArenaImpl.PlayerState.ALIVE));
             } else if (event.getState() == ArenaImpl.ArenaState.ENDING) {
                 minesumo.getStatsHandler().getArenaCache().synchronous().invalidate(impl.getGameID());
             }

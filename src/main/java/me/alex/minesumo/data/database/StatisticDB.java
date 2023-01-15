@@ -89,6 +89,24 @@ public class StatisticDB {
         });
     }
 
+    /**
+     * Returns the Playerstatistics for the given name. <b>Case-Sensitive!</b>
+     *
+     * @param name The name of the player
+     * @return {@link PlayerStatistics} for the given name
+     */
+    @NotNull
+    public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
+        Bson filter = playerFilter(name);
+
+        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
+            Document dc = documents.first();
+            if (dc == null) {
+                return null;
+            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
+        });
+    }
+
     @NotNull
     public CompletableFuture<Map<UUID, PlayerStatistics>> getBulkPlayers(List<UUID> players) {
         CompletableFuture<Map<UUID, PlayerStatistics>> future = new CompletableFuture<>();
@@ -104,18 +122,6 @@ public class StatisticDB {
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> future.complete(map));
         return future;
-    }
-
-    @NotNull
-    public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
-        Bson filter = playerFilter(name);
-
-        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) {
-                return null;
-            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
-        });
     }
 
     private void saveUser(UUID player, PlayerStatistics stats) {

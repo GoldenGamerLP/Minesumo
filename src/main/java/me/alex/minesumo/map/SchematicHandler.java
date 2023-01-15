@@ -103,7 +103,7 @@ public class SchematicHandler {
                     .completedFuture(config)
                     .thenApply(mapConfig -> schematicFolder.resolve(mapConfig.getSchematicFile()))
                     .thenComposeAsync(path -> {
-                        //TODO: Dumm code. Why throw an extra exception when we are using futures
+                        //Maybe optimize it in the future. Own library?
                         try {
                             return Scaffolding.fromPath(path);
                         } catch (IOException | NBTException e) {

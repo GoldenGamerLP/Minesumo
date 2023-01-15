@@ -34,7 +34,7 @@ public class RoundStartingTask extends AbstractTask {
             arena.addPlayersToTeam();
 
             arena.getLivingTeams().forEach(integer -> {
-                List<String> players = arena.getPlayers(integer).stream().map(Player::getUsername).toList();
+                List<String> players = arena.getPlayersFromTeam(integer).stream().map(Player::getUsername).toList();
                 arena.sendMessage(Component.translatable("Team: " + integer + " | Players: " + players));
             });
         }

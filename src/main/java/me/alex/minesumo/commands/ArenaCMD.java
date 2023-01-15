@@ -51,7 +51,7 @@ public class ArenaCMD extends Command {
             if (!(player.getInstance() instanceof ArenaImpl impl)) return;
 
             if (impl.getState() != ArenaImpl.ArenaState.WAITING_FOR_PLAYERS) return;
-            if (impl.getPlayers(ArenaImpl.PlayerState.ALIVE).size() < 2) return;
+            if (impl.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).size() < 2) return;
 
             impl.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
             player.sendMessage("Started");

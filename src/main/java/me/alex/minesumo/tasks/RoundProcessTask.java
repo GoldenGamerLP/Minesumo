@@ -37,7 +37,7 @@ public class RoundProcessTask extends AbstractTask {
         Integer[] lifes = arena.getLives();
 
         for (Integer livingTeam : arena.getLivingTeams()) {
-            List<Player> players = arena.getPlayers(livingTeam);
+            List<Player> players = arena.getPlayersFromTeam(livingTeam);
             sb.append("Team: ");
             sb.append(livingTeam);
             sb.append(" - Lives: ");
@@ -63,7 +63,7 @@ public class RoundProcessTask extends AbstractTask {
     @Override
     void onStop() {
         if (seconds != 0) return;
-        EventDispatcher.call(new ArenaEndEvent(arena, ArenaEndEvent.EndState.DRAW, arena.getPlayers(ArenaImpl.PlayerState.ALIVE), 0));
+        EventDispatcher.call(new ArenaEndEvent(arena, ArenaEndEvent.EndState.DRAW, arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE), 0));
         arena.changeArenaState(ArenaImpl.ArenaState.ENDING);
     }
 }

@@ -78,8 +78,9 @@ public class Minesumo extends Extension {
 
         new GlobalEventListener(this);
 
-        //TODO: only register debug command if editorMode is enabled
-        new ArenaCMD("debug", this);
+        if (getConfig().getIsInEditorMode())
+            new ArenaCMD("debug", this);
+
         new ArenaSetupCMD(this);
         new ForceLivesCMD(this);
         new ForceStartCMD(this);

@@ -75,7 +75,7 @@ public class ArenaImpl extends AbstractArena {
         node.addListener(EntitySpawnEvent.class, this::handlePlayerJoinArenaEvent);
         node.addListener(RemoveEntityFromInstanceEvent.class, this::handlePlayerLeaveArenaEvent);
         node.addListener(PlayerDisconnectEvent.class, event -> {
-            //Unregister instance if 1 or less players are in the instance
+            //Unregister instance if 1 or fewer players are in the instance
             if (this.getPlayers().size() <= 1) {
                 if (this.getState() == ArenaState.ENDING) return;
                 this.unregisterInstance();
@@ -131,8 +131,6 @@ public class ArenaImpl extends AbstractArena {
                 if (!teams.contains(team))
                     EventDispatcher.call(new TeamEliminatedEvent(this, team, player, null));
 
-                //TODO: Add double minus points to player if team is still alive
-                //TODO: Add minus points to the player
                 //Last team/player standing
                 if (teams.size() == 1) {
                     EventDispatcher.call(new ArenaEndEvent(this, ArenaEndEvent.EndState.DRAW, List.of(), 0));
@@ -165,7 +163,7 @@ public class ArenaImpl extends AbstractArena {
                 player.setGameMode(GameMode.ADVENTURE);
 
                 //Method --> areEnoughPlayers();
-                if (getPlayers(PlayerState.ALIVE).size() == getMaxPlayers())
+                if (getPlayerFromState(PlayerState.ALIVE).size() == getMaxPlayers())
                     this.changeArenaState(ArenaState.NORMAL_STARTING);
 
             }
@@ -234,8 +232,9 @@ public class ArenaImpl extends AbstractArena {
 
                     int size = livingTeam.size();
                     if (size <= 1) {
+                        //End Arena because last team standing
                         ArenaEndEvent.EndState state = size == 0 ? ArenaEndEvent.EndState.DRAW : ArenaEndEvent.EndState.WIN;
-                        List<Player> players = size == 0 ? getPlayers(PlayerState.ALIVE) : getPlayers(livingTeam.get(0));
+                        List<Player> players = size == 0 ? getPlayerFromState(PlayerState.ALIVE) : getPlayersFromTeam(livingTeam.get(0));
                         int teamID = size == 0 ? 0 : livingTeam.get(0);
 
                         EventDispatcher.call(new ArenaEndEvent(this, state, players, teamID));
@@ -255,32 +254,9 @@ public class ArenaImpl extends AbstractArena {
         EventDispatcher.call(new ArenaChangeStateEvent(this, state));
     }
 
-    public Map<UUID, Integer> getTeams() {
-        return playersTeamIds;
-    }
-
-    public ArenaState getState() {
-        return state.get();
-    }
-
-    public MapConfig getMapConfig() {
-        return mapConfig;
-    }
-
-    public int getMaxPlayers() {
-        return this.mapConfig.getSpawnPositions().size() * this.mapConfig.getPlayerPerSpawnPosition();
-    }
-
-    public List<Player> getPlayers(PlayerState playerState) {
-        return this.getPlayers()
-                .stream()
-                .filter(player -> this.playerStates.get(player.getUuid()).equals(playerState))
-                .toList();
-    }
-
     public void addPlayersToTeam() {
         List<List<Player>> teams = ListUtils.distributeNumbers(
-                this.getPlayers(PlayerState.ALIVE),
+                this.getPlayerFromState(PlayerState.ALIVE),
                 this.mapConfig.getSpawnPositions().size());
 
         this.lives = new Integer[teams.size() + 1];
@@ -304,16 +280,6 @@ public class ArenaImpl extends AbstractArena {
         }
     }
 
-    public List<Player> getPlayers(final Integer team) {
-        if (!this.playersTeamIds.containsValue(team)) return List.of();
-        return playersTeamIds.entrySet()
-                .stream()
-                .filter(uuidIntegerEntry -> Objects.equals(uuidIntegerEntry.getValue(), team))
-                .map(Map.Entry::getKey)
-                .map(MinecraftServer.getConnectionManager()::getPlayer)
-                .toList();
-    }
-
     public void teleportPlayerToSpawn(Player player) {
         if (!this.playerStates.containsKey(player.getUuid())
                 || !this.playersTeamIds.containsKey(player.getUuid())) {
@@ -328,6 +294,27 @@ public class ArenaImpl extends AbstractArena {
         player.teleport(this.mapConfig.getSpawnPositions().get(playerTeam));
     }
 
+    public List<Player> getPlayerFromState(PlayerState playerState) {
+        return this.getPlayers()
+                .stream()
+                .filter(player -> this.playerStates.get(player.getUuid()).equals(playerState))
+                .toList();
+    }
+
+    public int getMaxPlayers() {
+        return this.mapConfig.getSpawnPositions().size() * this.mapConfig.getPlayerPerSpawnPosition();
+    }
+
+    public List<Player> getPlayersFromTeam(final Integer team) {
+        if (!this.playersTeamIds.containsValue(team)) return List.of();
+        return playersTeamIds.entrySet()
+                .stream()
+                .filter(uuidIntegerEntry -> Objects.equals(uuidIntegerEntry.getValue(), team))
+                .map(Map.Entry::getKey)
+                .map(MinecraftServer.getConnectionManager()::getPlayer)
+                .toList();
+    }
+
     public List<Integer> getLivingTeams() {
         return playersTeamIds.entrySet()
                 .stream()
@@ -335,10 +322,6 @@ public class ArenaImpl extends AbstractArena {
                 .filter(uuidIntegerEntry -> this.playerStates.get(uuidIntegerEntry.getKey()).equals(PlayerState.ALIVE))
                 .map(Map.Entry::getValue)
                 .distinct().toList();
-    }
-
-    public Map<UUID, PlayerState> getPlayerStates() {
-        return playerStates;
     }
 
     public Map<UUID, Integer> getPlayersTeamIds() {
@@ -353,6 +336,17 @@ public class ArenaImpl extends AbstractArena {
         return lives;
     }
 
+    public Map<UUID, Integer> getTeams() {
+        return playersTeamIds;
+    }
+
+    public ArenaState getState() {
+        return state.get();
+    }
+
+    public MapConfig getMapConfig() {
+        return mapConfig;
+    }
 
     public enum ArenaState {
         LOADING,
@@ -360,8 +354,8 @@ public class ArenaImpl extends AbstractArena {
         NORMAL_STARTING,
         INGAME,
         ENDING
-    }
 
+    }
 
     public enum PlayerState {
         SPECTATOR,
