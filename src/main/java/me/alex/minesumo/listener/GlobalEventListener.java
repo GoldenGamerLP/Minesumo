@@ -2,10 +2,16 @@ package me.alex.minesumo.listener;
 
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.events.*;
+import me.alex.minesumo.data.statistics.PlayerStatistics;
+import me.alex.minesumo.data.statistics.StatisticsManager;
+import me.alex.minesumo.events.ArenaChangeStateEvent;
+import me.alex.minesumo.events.ArenaEndEvent;
+import me.alex.minesumo.events.PlayerDeathEvent;
+import me.alex.minesumo.events.TeamEliminatedEvent;
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.map.MapSelector;
 import me.alex.minesumo.messages.Messages;
+import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
@@ -79,6 +85,22 @@ public class GlobalEventListener {
                         Component.text(player));
 
             } else component = Messages.GAME_DRAW.toTranslatable();
+
+            statsMng.arenaEnd(instance.getGameID(), event.getState(), event.getWinningPlayers());
+            instance.getPlayers(ArenaImpl.PlayerState.ALIVE).forEach(pls -> minesumo.getStatsHandler()
+                    .getPlayerCache()
+                    .getIfPresent(pls.getUuid()).thenAccept(pl -> {
+
+                        int kills = pl.getKills();
+                        int deaths = pl.getDeaths();
+                        double kd = kills * 1D / deaths;
+                        int team = instance.getPlayersTeamIds().getOrDefault(pls.getUuid(), -1);
+                        pls.sendMessage(Messages.GAME_END_SUMMARY_SELF.toTranslatable(
+                                Component.text(kills),
+                                Component.text(deaths),
+                                Component.text(String.format("%1.2f", kd)),
+                                Component.text(team)));
+                    }));
 
             instance.sendMessage(component);
         });

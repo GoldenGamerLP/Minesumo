@@ -1,23 +1,31 @@
 package me.alex.minesumo.data.statistics;
 
+import com.google.gson.annotations.Expose;
 import lombok.Data;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 @Data
 public final class PlayerStatistics {
 
+    @Expose
     private final UUID playerID;
-    private final Map<UUID, Instant> gamesPlayed;
-    private int kills, deaths;
+    @Expose
+    private final List<String> gamesPlayed;
+    @Expose
+    private String lastName;
+    @Expose
+    private int
+            kills = 0,
+            deaths = 0,
+            wins = 0;
 
-    public PlayerStatistics(UUID playerID) {
+    public PlayerStatistics(UUID playerID, String knownName) {
         this.playerID = playerID;
-        this.gamesPlayed = new HashMap<>();
-        this.kills = 0;
-        this.deaths = 0;
+        this.lastName = knownName;
+        this.gamesPlayed = new LinkedList<>();
     }
 }
+

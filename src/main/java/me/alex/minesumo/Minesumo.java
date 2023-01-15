@@ -55,10 +55,11 @@ public class Minesumo extends Extension {
 
     @Override
     public void initialize() {
-        log.info("Initializing \n Loading configuration...");
+        log.info("Initializing configurations...");
 
         this.mainCFG.load();
         this.mapCFG.load();
+
         this.schematicHandler = new SchematicHandler(this);
 
         log.info("Loading Schematics...");
@@ -91,7 +92,7 @@ public class Minesumo extends Extension {
 
     @Override
     public void terminate() {
-
+        this.mongoDB.close();
     }
 
     @Override

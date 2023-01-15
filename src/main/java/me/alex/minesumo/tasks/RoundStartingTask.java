@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.tasks;
+package me.alex.minesumo.tasks;
 
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.messages.Messages;
@@ -32,7 +32,6 @@ public class RoundStartingTask extends AbstractTask {
 
         if (seconds == roundStartingTime.toSeconds()) {
             arena.addPlayersToTeam();
-            arena.getPlayers().forEach(arena::teleportPlayerToSpawn);
 
             arena.getLivingTeams().forEach(integer -> {
                 List<String> players = arena.getPlayers(integer).stream().map(Player::getUsername).toList();
@@ -40,8 +39,8 @@ public class RoundStartingTask extends AbstractTask {
             });
         }
         if (seconds == 0) {
+            arena.getPlayers().forEach(arena::teleportPlayerToSpawn);
             arena.changeArenaState(ArenaImpl.ArenaState.INGAME);
-            arena.resetTitle();
         }
 
         float percent = seconds * 1F / roundStartingTime.toSeconds();
@@ -64,5 +63,11 @@ public class RoundStartingTask extends AbstractTask {
         arena.sendActionBar(component);
 
         seconds--;
+    }
+
+    @Override
+    void onStop() {
+        arena.clearTitle();
+        arena.resetTitle();
     }
 }

@@ -2,6 +2,7 @@ package me.alex.minesumo.map;
 
 import dev.hypera.scaffolding.Scaffolding;
 import dev.hypera.scaffolding.schematic.Schematic;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
@@ -29,6 +30,7 @@ public class SchematicHandler {
 
     private final Minesumo minesumo;
 
+    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
     public SchematicHandler(Minesumo minesumo) {
         this.config = minesumo.getMapConfig();
         this.loadedMapConfigs = new CopyOnWriteArrayList<>();

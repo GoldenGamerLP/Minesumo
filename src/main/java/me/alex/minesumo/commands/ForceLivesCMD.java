@@ -10,9 +10,9 @@ import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.command.builder.condition.Conditions;
 import net.minestom.server.entity.Player;
 
-public class ForceLives extends Command {
+public class ForceLivesCMD extends Command {
 
-    public ForceLives(Minesumo minesumo) {
+    public ForceLivesCMD(Minesumo minesumo) {
         super("lives", "force-lives", "maxLifes");
 
         setCondition(Conditions::playerOnly);

@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.tasks;
+package me.alex.minesumo.tasks;
 
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.messages.Messages;

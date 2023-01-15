@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.tasks;
+package me.alex.minesumo.tasks;
 
 import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.instances.ArenaImpl;
@@ -28,13 +28,11 @@ public class RoundProcessTask extends AbstractTask {
             this.cancel();
             return;
         }
-        if (seconds == 0) {
-            EventDispatcher.call(new ArenaEndEvent(arena, ArenaEndEvent.EndState.DRAW, arena.getPlayers(ArenaImpl.PlayerState.ALIVE), 0));
-            arena.changeArenaState(ArenaImpl.ArenaState.ENDING);
+        if (seconds == 0)
             this.cancel();
-        }
 
-        //Update scoreboards
+        //TODO: Add the message to the config
+        //TODO: Think about a new design which is not so ugly and big
         StringBuilder sb = new StringBuilder();
         Integer[] lifes = arena.getLives();
 
@@ -60,5 +58,12 @@ public class RoundProcessTask extends AbstractTask {
             arena.sendMessage(Messages.GAME_ENDING.toTranslatable(Component.text(seconds)));
 
         seconds--;
+    }
+
+    @Override
+    void onStop() {
+        if (seconds != 0) return;
+        EventDispatcher.call(new ArenaEndEvent(arena, ArenaEndEvent.EndState.DRAW, arena.getPlayers(ArenaImpl.PlayerState.ALIVE), 0));
+        arena.changeArenaState(ArenaImpl.ArenaState.ENDING);
     }
 }

@@ -11,11 +11,11 @@ import net.minestom.server.command.builder.condition.Conditions;
 import net.minestom.server.entity.Player;
 
 @Slf4j
-public class ForceStart extends Command {
+public class ForceStartCMD extends Command {
 
-    private Integer MIN_PLAYER_START = 2;
+    private final Integer MIN_PLAYER_START;
 
-    public ForceStart(Minesumo minesumo) {
+    public ForceStartCMD(Minesumo minesumo) {
         super("start", "force-start", "skip");
 
         this.MIN_PLAYER_START = minesumo.getConfig().getMinPlayersToStart();
@@ -36,7 +36,7 @@ public class ForceStart extends Command {
                 return;
             }
 
-            if (arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size() <= MIN_PLAYER_START) {
+            if (arena.getPlayers(ArenaImpl.PlayerState.ALIVE).size() < 2) {
                 player.sendMessage(Messages
                         .GAME_COMMAND_FAILURE_PLAYERS
                         .toTranslatable(Component.text(MIN_PLAYER_START)));
@@ -44,7 +44,7 @@ public class ForceStart extends Command {
             }
 
             //Starting Arena
-            log.info("Force Starting Arena {}", arena.getUniqueId());
+            log.info("Force Starting Arena {}", arena.getGameID());
             player.sendMessage(Messages
                     .GAME_COMMAND_FORCE_START_SUCCESS
                     .toTranslatable());

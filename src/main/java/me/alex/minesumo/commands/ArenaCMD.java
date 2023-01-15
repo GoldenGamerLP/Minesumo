@@ -13,9 +13,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public class ArenaCommand extends Command {
+public class ArenaCMD extends Command {
 
-    public ArenaCommand(@NotNull String name, Minesumo minesumo) {
+    public ArenaCMD(@NotNull String name, Minesumo minesumo) {
         super(name);
 
         var arg = ArgumentType.Literal("isArena");
@@ -31,11 +31,20 @@ public class ArenaCommand extends Command {
 
         var startGame = ArgumentType.Literal("start");
 
+        var gameIdAndInfo = ArgumentType.Literal("gameID");
+
         maps.setSuggestionCallback((sender, context, suggestion) -> {
             minesumo.getSchematicLoader().getLoadedMapConfigs().forEach(mapConfig -> {
                 suggestion.addEntry(new SuggestionEntry(mapConfig.getSchematicFile()));
             });
         });
+
+        this.addSyntax((sender, context) -> {
+            if (!(sender instanceof Player player)) return;
+            if (!(player.getInstance() instanceof ArenaImpl impl)) return;
+
+            player.sendMessage(impl.getGameID());
+        }, gameIdAndInfo);
 
         this.addSyntax((sender, context) -> {
             if (!(sender instanceof Player player)) return;

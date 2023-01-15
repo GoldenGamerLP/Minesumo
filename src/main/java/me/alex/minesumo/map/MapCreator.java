@@ -16,9 +16,10 @@ import java.util.concurrent.ConcurrentMap;
 
 @Slf4j
 public class MapCreator {
+    private final static Pos pastePos = new Pos(0, 64, 0);
     private final ConcurrentMap<MapConfig, MinesumoInstance> activeMaps;
     private final ConcurrentMap<MapConfig, List<CompletableFuture<ArenaImpl>>> activeCalls;
-    private final Pos pastePos = new Pos(0, 64, 0);
+    private final ArenaGameIDGenerator idGenerator;
 
     public MapCreator(Minesumo minesumo) {
         this.activeMaps = new ConcurrentHashMap<>();

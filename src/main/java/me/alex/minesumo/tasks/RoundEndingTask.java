@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.tasks;
+package me.alex.minesumo.tasks;
 
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.messages.Messages;
@@ -18,12 +18,10 @@ public class RoundEndingTask extends AbstractTask {
 
     @Override
     void onRun(ArenaImpl arena) {
-        if (arena.getState() != ArenaImpl.ArenaState.ENDING) {
+        if (arena.getState() != ArenaImpl.ArenaState.ENDING || seconds == 0) {
             this.cancel();
             return;
         }
-        if (seconds == 0)
-            arena.unregisterInstance();
 
         Component translated = Messages.GAME_ENDING.toTranslatable(Component.text(seconds));
 
@@ -36,5 +34,10 @@ public class RoundEndingTask extends AbstractTask {
         bar.color(BossBar.Color.RED);
 
         seconds--;
+    }
+
+    @Override
+    void onStop() {
+        arena.unregisterInstance();
     }
 }

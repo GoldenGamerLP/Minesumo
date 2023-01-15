@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-public class ArenaSetupCommand extends Command {
+public class ArenaSetupCMD extends Command {
 
     private final Map<UUID, MinesumoInstance> activeMaps;
 
-    public ArenaSetupCommand(Minesumo minesumo) {
+    public ArenaSetupCMD(Minesumo minesumo) {
         super("setup");
         this.activeMaps = new HashMap<>();
 
@@ -63,7 +63,6 @@ public class ArenaSetupCommand extends Command {
         });
 
         addSyntax((sender, context) -> {
-            sender.sendMessage("WADASSADMLMKFMKOFMFKMKFMFMK");
             if (!(sender instanceof Player player)) return;
             if (this.activeMaps.containsKey(player.getUuid())) {
                 player.sendMessage("You are already setupping.");
@@ -202,7 +201,7 @@ public class ArenaSetupCommand extends Command {
         MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
 
         Pos pos = player.getPosition();
-        boolean isAdded = mapConfig.getSpawnPositions().add(pos);
+        mapConfig.getSpawnPositions().add(pos);
         int index = mapConfig.getSpawnPositions().indexOf(pos);
         player.sendMessage("Added a spawn at " + player.getPosition() + " with ID: " + index);
 

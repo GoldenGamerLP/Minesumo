@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.tasks;
+package me.alex.minesumo.tasks;
 
 import me.alex.minesumo.instances.ArenaImpl;
 
@@ -6,7 +6,7 @@ import java.util.TimerTask;
 
 public abstract class AbstractTask extends TimerTask {
 
-    private final ArenaImpl arena;
+    protected final ArenaImpl arena;
 
     protected AbstractTask(ArenaImpl arena) {
         this.arena = arena;
@@ -18,4 +18,13 @@ public abstract class AbstractTask extends TimerTask {
     }
 
     abstract void onRun(ArenaImpl arena);
+
+    @Override
+    public boolean cancel() {
+        this.onStop();
+        return super.cancel();
+    }
+
+    void onStop() {
+    }
 }
