@@ -31,9 +31,11 @@ public final class JsonConfigurationLoader<T> {
     static {
         gson = new GsonBuilder()
                 .setPrettyPrinting()
-                .disableInnerClassSerialization()
                 .disableHtmlEscaping()
                 .excludeFieldsWithoutExposeAnnotation()
+                .enableComplexMapKeySerialization()
+                .setLenient()
+                .serializeNulls()
                 .create();
 
 
@@ -58,10 +60,14 @@ public final class JsonConfigurationLoader<T> {
         gson = gson.newBuilder().registerTypeHierarchyAdapter(clazz, obj).create();
     }
 
+    public static Gson getGson() {
+        return gson;
+    }
+
     public JsonConfigurationLoader<T> load() {
         try {
             if (!file.exists()) {
-                log.info("Creating [{}] File successfully: {}", this.file, createFileIfNotExists());
+                log.info("Creating [{}] file successfully: {}", this.file, createFileIfNotExists());
                 gsonObject = of.getDeclaredConstructor().newInstance();
                 writeToFile();
             } else readFromFile();

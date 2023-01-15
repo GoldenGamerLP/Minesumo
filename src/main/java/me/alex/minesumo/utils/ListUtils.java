@@ -2,8 +2,16 @@ package me.alex.minesumo.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class ListUtils {
+
+    public static <T> String formatList(List<T> list, Function<T, String> fun) {
+        return list.stream()
+                .map(fun)
+                .collect(Collectors.joining(", "));
+    }
 
     /**
      * Splits the given objects in to number of groups. Excess objects get added randomly to the groups.

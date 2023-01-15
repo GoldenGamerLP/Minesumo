@@ -14,8 +14,8 @@ public class PosConverter implements JsonSerializer<Pos>, JsonDeserializer<Pos> 
                 js.get("x").getAsDouble(),
                 js.get("y").getAsDouble(),
                 js.get("z").getAsDouble(),
-                js.get("pitch").getAsFloat(),
-                js.get("yaw").getAsFloat()
+                js.get("yaw").getAsFloat(),
+                js.get("pitch").getAsFloat()
         );
     }
 

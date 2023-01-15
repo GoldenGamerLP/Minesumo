@@ -2,27 +2,34 @@ package me.alex.minesumo.data.configuration;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import lombok.Getter;
+import lombok.Data;
 
-import java.util.HashSet;
-import java.util.Set;
-
+@Data
 public class MinesumoMainConfig {
 
-    @Getter
+
     @SerializedName("mapFolder")
     @Expose
-    private final String schematicFolder = "/schematicFolder";
+    private String schematicFolder = "schematics";
 
-    @Getter
+
+    @Expose
+    private Integer minPlayersToStart = 2,
+            startingLives = 0,
+            minLives = 0,
+            maxLives = 3;
+
+
     @SerializedName("isEditorMode")
     @Expose
-    private final Boolean isInEditorMode = false;
+    private Boolean isInEditorMode = false;
 
-
-    @Getter
-    @SerializedName("mapList")
+    @SerializedName("fastJoin")
     @Expose
-    private final Set<MapConfig> maps = new HashSet<>();
+    private Boolean fastJoin = false;
+
+    @SerializedName("mongoDB")
+    @Expose
+    private String mongoDB = "mongoDB";
 
 }
