@@ -14,7 +14,7 @@ public class PlayerOutOfArenaEvent implements InstanceEvent, PlayerEvent {
     private final ArenaImpl arenaImpl;
     private Pos newPlayerPosition = null;
 
-    public PlayerOutOfArenaEvent(Player player, ArenaImpl arenaImpl) {
+    public PlayerOutOfArenaEvent(ArenaImpl arenaImpl, Player player) {
         this.player = player;
         this.arenaImpl = arenaImpl;
     }

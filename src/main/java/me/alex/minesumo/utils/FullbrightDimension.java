@@ -7,7 +7,7 @@ import net.minestom.server.world.DimensionType;
 public class FullbrightDimension {
 
     public static final DimensionType DEFAULT_DIM = DimensionType.builder(NamespaceID.from("minesumo:full_bright"))
-            .ambientLight(2F)
+            .ambientLight(1.5F)
             .fixedTime(6000L)
             .minY(-64)
             .height(384)

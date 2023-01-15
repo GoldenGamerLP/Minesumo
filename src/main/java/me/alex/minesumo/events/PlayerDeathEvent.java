@@ -3,11 +3,12 @@ package me.alex.minesumo.events;
 import me.alex.minesumo.instances.ArenaImpl;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.trait.InstanceEvent;
+import net.minestom.server.event.trait.PlayerEvent;
 import net.minestom.server.instance.Instance;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class PlayerDeathEvent implements InstanceEvent {
+public class PlayerDeathEvent implements InstanceEvent, PlayerEvent {
 
     private final Player player, attacker;
     private final int teamId;
@@ -24,7 +25,7 @@ public class PlayerDeathEvent implements InstanceEvent {
         this.instance = instance;
     }
 
-    public Player getPlayer() {
+    public @NotNull Player getPlayer() {
         return player;
     }
 

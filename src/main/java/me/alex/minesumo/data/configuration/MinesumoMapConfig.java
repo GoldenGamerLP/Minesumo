@@ -10,5 +10,5 @@ import java.util.Set;
 public class MinesumoMapConfig {
 
     @Expose
-    Set<MapConfig> configurations = new HashSet<>();
+    private Set<MapConfig> configurations = new HashSet<>();
 }

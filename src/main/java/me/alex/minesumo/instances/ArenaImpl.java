@@ -11,14 +11,13 @@ import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
-import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
-import net.minestom.server.event.EventListener;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.event.entity.EntitySpawnEvent;
+import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
-import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.event.trait.InstanceEvent;
 import net.minestom.server.timer.TaskSchedule;
 
@@ -41,18 +40,24 @@ public class ArenaImpl extends AbstractArena {
     private final AtomicReference<ArenaState> state = new AtomicReference<>(ArenaState.LOADING);
     private Integer[] lives;
 
-    public ArenaImpl(MinesumoInstance instance, MapConfig config) {
-        super(UUID.randomUUID(), instance, config);
+    public ArenaImpl(MinesumoInstance instance, MapConfig config, String gameID) {
+        super(UUID.randomUUID(), instance, config, gameID);
 
-        log.info("Initializing Arena {}", this.uniqueId);
+        log.info("Initializing Arena {} arenaUID and with UUID {}", this.getGameID(), this.uniqueId);
 
         this.mapConfig = config;
 
-        this.timer = new Timer(this.getUniqueId().toString());
-        this.gameBar = BossBar.bossBar(Component.empty(), 1F, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
+        this.timer = new Timer(this.getGameID());
+        this.gameBar = BossBar.bossBar(
+                Component.text(this.getGameID()),
+                1F,
+                BossBar.Color.WHITE,
+                BossBar.Overlay.PROGRESS);
 
         this.playerStates = new Object2ObjectOpenHashMap<>();
         this.playersTeamIds = new Object2IntArrayMap<>();
+
+        this.timer.schedule(new ArenaPlayerCheck(this), 0, 250);
 
         registerListener();
 
@@ -67,26 +72,16 @@ public class ArenaImpl extends AbstractArena {
         EventNode<InstanceEvent> node = this.eventNode();
 
         node.addListener(PlayerOutOfArenaEvent.class, this::handlePlayerOutOfArena);
-        node.addListener(PlayerJoinArenaEvent.class, this::handlePlayerJoinArenaEvent);
-        node.addListener(PlayerLeaveArenaEvent.class, this::handlePlayerLeaveArenaEvent);
+        node.addListener(EntitySpawnEvent.class, this::handlePlayerJoinArenaEvent);
+        node.addListener(RemoveEntityFromInstanceEvent.class, this::handlePlayerLeaveArenaEvent);
         node.addListener(PlayerDisconnectEvent.class, event -> {
-            if (this.getPlayers().size() - 1 > 0) return;
-            if (this.getState() == ArenaState.ENDING) return;
-            this.unregisterInstance();
+            //Unregister instance if 1 or less players are in the instance
+            if (this.getPlayers().size() <= 1) {
+                if (this.getState() == ArenaState.ENDING) return;
+                this.unregisterInstance();
+            }
         });
 
-        EventListener<PlayerMoveEvent> moveEvent = EventListener.builder(PlayerMoveEvent.class)
-                .filter(ignored -> this.getState().equals(ArenaState.NORMAL_STARTING))
-                .filter(playerMoveEvent -> this.playerStates.get(playerMoveEvent.getPlayer().getUuid()).equals(PlayerState.ALIVE))
-                .handler(playerMoveEvent -> {
-                    int team = this.playersTeamIds.get(playerMoveEvent.getPlayer().getUuid());
-                    Pos pos = this.getMapConfig().getSpawnPositions().get(team);
-                    playerMoveEvent.setNewPosition(pos);
-                })
-                .expireWhen(event -> getState() == ArenaState.INGAME)
-                .build();
-
-        node.addListener(moveEvent);
         node.addListener(ArenaChangeStateEvent.class, arena -> {
             //Start tasks
             switch (arena.getArena().getState()) {
@@ -107,14 +102,17 @@ public class ArenaImpl extends AbstractArena {
                         this.roundEndingTask,
                         0,
                         Duration.ofSeconds(1).toMillis());
+                default -> {
+                }
             }
         });
 
     }
 
 
-    private void handlePlayerLeaveArenaEvent(PlayerLeaveArenaEvent playerLeaveArenaEvent) {
-        Player player = playerLeaveArenaEvent.getPlayer();
+    private void handlePlayerLeaveArenaEvent(RemoveEntityFromInstanceEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+
 
         player.hideBossBar(gameBar);
 
@@ -123,9 +121,7 @@ public class ArenaImpl extends AbstractArena {
         if (this.playerStates.remove(player.getUuid()) == PlayerState.SPECTATOR) return;
 
         switch (getState()) {
-            case NORMAL_STARTING -> {
-                this.changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
-            }
+            case NORMAL_STARTING -> this.changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
             case INGAME -> {
                 List<Integer> teams = getLivingTeams();
                 int team = this.getTeams().get(player.getUuid());
@@ -133,24 +129,26 @@ public class ArenaImpl extends AbstractArena {
                 EventDispatcher.call(new PlayerDeathEvent(this, player, null, team, lives[team]));
 
                 if (!teams.contains(team))
-                    EventDispatcher.call(new TeamEliminatedEvent(this, team, player));
+                    EventDispatcher.call(new TeamEliminatedEvent(this, team, player, null));
 
                 //TODO: Add double minus points to player if team is still alive
                 //TODO: Add minus points to the player
                 //Last team/player standing
                 if (teams.size() == 1) {
-                    EventDispatcher.call(new ArenaEndEvent(this, ArenaEndEvent.EndState.DRAW, getPlayers(teams.get(0)), 0));
+                    EventDispatcher.call(new ArenaEndEvent(this, ArenaEndEvent.EndState.DRAW, List.of(), 0));
                     this.changeArenaState(ArenaState.ENDING);
                 }
             }
+            default -> {
+            }
         }
+
+        //Events
+        EventDispatcher.call(new PlayerLeaveArenaEvent(this, player));
     }
 
-    private void handlePlayerJoinArenaEvent(PlayerJoinArenaEvent playerJoinArenaEvent) {
-        Player player = playerJoinArenaEvent.getPlayer();
-        //Register
-        if (playerJoinArenaEvent.isCancelled()) return;
-
+    private void handlePlayerJoinArenaEvent(EntitySpawnEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
         player.showBossBar(gameBar);
 
         switch (getState()) {
@@ -164,8 +162,6 @@ public class ArenaImpl extends AbstractArena {
                 //Player can only see each other in a instance
                 player.setRespawnPoint(this.mapConfig.getSpectatorPosition());
                 player.teleport(this.mapConfig.getSpectatorPosition());
-                player.updateViewerRule(entity -> true);
-                player.updateViewableRule(player1 -> this.getPlayers().contains(player1));
                 player.setGameMode(GameMode.ADVENTURE);
 
                 //Method --> areEnoughPlayers();
@@ -173,8 +169,11 @@ public class ArenaImpl extends AbstractArena {
                     this.changeArenaState(ArenaState.NORMAL_STARTING);
 
             }
-            case LOADING -> playerJoinArenaEvent.setCancelled(true);
+            default -> throw new IllegalStateException("Player cannot be in a loaded arena!");
         }
+
+        //Event calling
+        EventDispatcher.call(new PlayerJoinArenaEvent(this, player));
     }
 
     private void makePlayerSpectator(Player player) {
@@ -199,7 +198,7 @@ public class ArenaImpl extends AbstractArena {
             this.playerStates.clear();
 
             MinecraftServer.getInstanceManager().unregisterInstance(ArenaImpl.this);
-            log.info("Ended Arena {}", this.uniqueId);
+            log.info("Ended Arena {} with UUID {}", this.getGameID(), this.uniqueId);
         }, TaskSchedule.millis(100), TaskSchedule.stop());
     }
 
@@ -231,7 +230,7 @@ public class ArenaImpl extends AbstractArena {
                     List<Integer> livingTeam = getLivingTeams();
                     if (!livingTeam.contains(pteam))
                         //Team Eliminated
-                        EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player));
+                        EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player, attacker));
 
                     int size = livingTeam.size();
                     if (size <= 1) {
@@ -244,8 +243,9 @@ public class ArenaImpl extends AbstractArena {
                     }
                 } else lives[pteam] = plifes - 1;
 
-                //Todo: Figure out who killed who and add kills
                 teleportPlayerToSpawn(player);
+            }
+            default -> {
             }
         }
     }
@@ -279,8 +279,6 @@ public class ArenaImpl extends AbstractArena {
     }
 
     public void addPlayersToTeam() {
-        //if (this.lifes.length > 0) return;
-
         List<List<Player>> teams = ListUtils.distributeNumbers(
                 this.getPlayers(PlayerState.ALIVE),
                 this.mapConfig.getSpawnPositions().size());

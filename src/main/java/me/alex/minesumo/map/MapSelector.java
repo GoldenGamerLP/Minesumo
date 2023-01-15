@@ -22,12 +22,12 @@ public class MapSelector {
         ALL_MAPS = mapConfig -> true;
     }
 
-    private final List<MapConfig> availableMapConfigs;
+    private final SchematicHandler handler;
     private final MapCreator mapCreator;
     private final ThreadLocalRandom localRandom;
 
     public MapSelector(Minesumo minesumo) {
-        this.availableMapConfigs = minesumo.getSchematicLoader().getLoadedMapConfigs();
+        this.handler = minesumo.getSchematicLoader();
         this.mapCreator = minesumo.getMapCreator();
 
         this.localRandom = ThreadLocalRandom.current();
@@ -41,9 +41,10 @@ public class MapSelector {
      * @return A MapConfig or none if nothing was found.
      */
     public Optional<MapConfig> selectMap(Predicate<MapConfig> selection, MapSelectionStrategy selectionStrategy) {
-        if(availableMapConfigs.size() == 0) return Optional.empty();
+        List<MapConfig> configs = handler.getLoadedMapConfigs();
+        if (configs.size() == 0) return Optional.empty();
 
-        Stream<MapConfig> stream = availableMapConfigs.stream().filter(selection);
+        Stream<MapConfig> stream = configs.stream().filter(selection);
 
         return switch (selectionStrategy) {
             case ANY_RESULT -> stream.findAny();
@@ -54,10 +55,6 @@ public class MapSelector {
             }
             case FIRST_RESULT -> stream.findFirst();
         };
-    }
-
-    public ArenaImpl test(MapConfig config) {
-        return mapCreator.getMapNow(config);
     }
 
     /**
@@ -92,9 +89,7 @@ public class MapSelector {
     }
 
     public void queueArena(Player player, ArenaImpl impl) {
-        MinecraftServer.getSchedulerManager().scheduleNextTick(() -> {
-            player.setInstance(impl, impl.getMapConfig().getSpectatorPosition());
-        });
+        MinecraftServer.getSchedulerManager().scheduleNextTick(() -> player.setInstance(impl, impl.getMapConfig().getSpectatorPosition()));
     }
 
     public enum MapSelectionStrategy {

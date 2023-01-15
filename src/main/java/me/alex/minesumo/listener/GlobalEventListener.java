@@ -10,10 +10,9 @@ import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
-import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.GlobalEventHandler;
-import net.minestom.server.event.instance.AddEntityToInstanceEvent;
-import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent;
+import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
+import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerLoginEvent;
 import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.instance.Instance;
@@ -21,28 +20,21 @@ import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class GlobalEventListener {
 
     private final InstanceContainer container;
 
     public GlobalEventListener(Minesumo minesumo) {
+        StatisticsManager statsMng = minesumo.getStatisticsManager();
         GlobalEventHandler gl = MinecraftServer.getGlobalEventHandler();
 
         container = MinecraftServer.getInstanceManager().createInstanceContainer();
         container.setGenerator(unit -> unit.modifier().fillHeight(0, 1, Block.STONE));
 
         boolean isEditorMode = minesumo.getConfig().getIsInEditorMode();
-
-        gl.addListener(RemoveEntityFromInstanceEvent.class, event -> {
-            if (!(event.getInstance() instanceof ArenaImpl arenaImpl)) return;
-            if (!(event.getEntity() instanceof Player player)) return;
-            EventDispatcher.call(new PlayerLeaveArenaEvent(arenaImpl, player));
-        });
 
         gl.addListener(PlayerLoginEvent.class, playerLoginEvent -> {
             Player player = playerLoginEvent.getPlayer();
@@ -52,10 +44,10 @@ public class GlobalEventListener {
                 return;
             }
 
+            playerLoginEvent.setSpawningInstance(container);
 
             if (isEditorMode) {
                 player.setGameMode(GameMode.CREATIVE);
-                playerLoginEvent.setSpawningInstance(container);
                 return;
             }
 
@@ -64,40 +56,23 @@ public class GlobalEventListener {
                     .selectMap(MapSelector.ALL_MAPS, MapSelector.MapSelectionStrategy.RANDOM_RESULT);
 
             mpf.ifPresentOrElse(mapConfig -> {
-                playerLoginEvent.setSpawningInstance(minesumo.getMapManager().test(mapConfig));
+                CompletableFuture<ArenaImpl> instance = minesumo.getMapManager()
+                        .getAvailableMap(
+                                mapConfig,
+                                ArenaImpl.ArenaState.WAITING_FOR_PLAYERS);
+
+                //For Performance reasons
+                if (instance.isDone()) playerLoginEvent.setSpawningInstance(instance.join());
+                else instance.thenAccept(arena -> minesumo.getMapManager().queueArena(player, arena));
             }, () -> player.kick("No map found"));
         });
 
-        gl.addListener(AddEntityToInstanceEvent.class, event -> {
-            if (!(event.getInstance() instanceof ArenaImpl impl)) return;
-            if (!(event.getEntity() instanceof Player player)) return;
-
-            PlayerJoinArenaEvent ev = new PlayerJoinArenaEvent(impl, player);
-            EventDispatcher.call(ev);
-            event.setCancelled(event.isCancelled());
-
-        });
-
-        if (!isEditorMode) gl.addListener(PlayerMoveEvent.class, moveEvent -> {
-            if (!(moveEvent.getInstance() instanceof ArenaImpl arenaImpl)) return;
-            if (!(moveEvent.getNewPosition().y() <= arenaImpl.getMapConfig().getDeathLevel())) return;
-
-
-            PlayerOutOfArenaEvent death = new PlayerOutOfArenaEvent(moveEvent.getPlayer(), arenaImpl);
-            EventDispatcher.call(death);
-            if (death.getNewPlayerPosition() != null) moveEvent.setNewPosition(death.getNewPlayerPosition());
-        });
-
         gl.addListener(ArenaEndEvent.class, event -> {
-            Instance instance = event.getInstance();
+            ArenaImpl instance = (ArenaImpl) event.getInstance();
+            String player = ListUtils.formatList(event.getWinningPlayers(), Player::getUsername);
             Component component;
 
             if (event.getState() == ArenaEndEvent.EndState.WIN) {
-                String player = event.getWinningPlayers()
-                        .stream()
-                        .map(Player::getUsername)
-                        .toList()
-                        .toString();
 
                 component = Messages.GAME_WIN.toTranslatable(
                         Component.text(event.getTeamId()),
@@ -130,8 +105,36 @@ public class GlobalEventListener {
                     .toTranslatable(Component.text(user));
 
             instance.sendMessage(component);
+
+            //Stats
+            UUID deathID = event.getAttacker() == null ? null : event.getAttacker().getUuid();
+            statsMng.addDeath(instance.getGameID(), event.getPlayer().getUuid(), deathID);
         });
 
+        gl.addListener(ArenaChangeStateEvent.class, event -> {
+            ArenaImpl impl = event.getArena();
+            if (event.getState() == ArenaImpl.ArenaState.NORMAL_STARTING) {
+                statsMng.startGame(impl.getGameID(), impl.getPlayers(ArenaImpl.PlayerState.ALIVE));
+            } else if (event.getState() == ArenaImpl.ArenaState.ENDING) {
+                minesumo.getStatsHandler().getArenaCache().synchronous().invalidate(impl.getGameID());
+            }
+        });
+
+        gl.addListener(AsyncPlayerPreLoginEvent.class, event -> {
+            PlayerStatistics stats = minesumo.getStatsHandler().getPlayerCache()
+                    .get(event.getPlayerUuid())
+                    .join();
+
+            //Update name
+            stats.setLastName(event.getUsername());
+        });
+
+        gl.addListener(PlayerDisconnectEvent.class, event -> {
+            minesumo.getStatsHandler()
+                    .getPlayerCache()
+                    .synchronous()
+                    .invalidate(event.getPlayer().getUuid());
+        });
 
         if (!isEditorMode)
             container.eventNode().addListener(PlayerMoveEvent.class, playerMoveEvent -> playerMoveEvent.setCancelled(true));

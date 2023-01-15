@@ -18,9 +18,9 @@ public class MinesumoInstance extends InstanceContainer {
         super(UUID.randomUUID(), FullbrightDimension.DEFAULT_DIM);
 
         this.config = config;
-        //
+
         basicArenaSetup();
-        registerBasicListener();
+
         //Register
         MinecraftServer.getInstanceManager().registerInstance(this);
 
@@ -37,14 +37,11 @@ public class MinesumoInstance extends InstanceContainer {
         this.getWorldBorder().setWarningBlocks(1);
     }
 
-    private void registerBasicListener() {
-    }
-
     public MapConfig getConfig() {
         return config;
     }
 
-    public ArenaImpl createCopy() {
-        return new ArenaImpl(this, this.config);
+    public ArenaImpl createCopy(String gameID) {
+        return new ArenaImpl(this, this.config, gameID);
     }
 }

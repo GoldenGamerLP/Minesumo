@@ -30,9 +30,11 @@ public enum Messages {
     GENERAL_NOT_IN_AN_ARENA("message.general.notInAnArena");
 
     private final String key;
+    private final Boolean prefix;
 
-    Messages(String key) {
+    Messages(String key, Boolean prefix) {
         this.key = key;
+        this.prefix = prefix;
     }
 
     public TranslatableComponent toTranslatable(Component... args) {

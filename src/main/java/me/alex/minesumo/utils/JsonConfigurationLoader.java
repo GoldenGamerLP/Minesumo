@@ -31,9 +31,11 @@ public final class JsonConfigurationLoader<T> {
     static {
         gson = new GsonBuilder()
                 .setPrettyPrinting()
-                .disableInnerClassSerialization()
                 .disableHtmlEscaping()
                 .excludeFieldsWithoutExposeAnnotation()
+                .enableComplexMapKeySerialization()
+                .setLenient()
+                .serializeNulls()
                 .create();
 
 
@@ -56,6 +58,10 @@ public final class JsonConfigurationLoader<T> {
 
     public static void registerConverter(Class<?> clazz, Object obj) {
         gson = gson.newBuilder().registerTypeHierarchyAdapter(clazz, obj).create();
+    }
+
+    public static Gson getGson() {
+        return gson;
     }
 
     public JsonConfigurationLoader<T> load() {

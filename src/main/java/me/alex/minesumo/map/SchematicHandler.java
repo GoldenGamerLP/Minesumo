@@ -7,7 +7,6 @@ import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.configuration.MinesumoMapConfig;
 import me.alex.minesumo.instances.MinesumoInstance;
-import org.jetbrains.annotations.NotNull;
 import org.jglrxavpok.hephaistos.nbt.NBTException;
 
 import java.io.IOException;
@@ -26,14 +25,13 @@ public class SchematicHandler {
     private final Path schematicFolder;
     private final Predicate<MapConfig> mapValidator;
 
-    private final CopyOnWriteArrayList<MapConfig> loadedMapConfigs;
+    private final List<MapConfig> loadedMapConfigs;
 
     private final Minesumo minesumo;
 
     public SchematicHandler(Minesumo minesumo) {
         this.config = minesumo.getMapConfig();
         this.loadedMapConfigs = new CopyOnWriteArrayList<>();
-        //Todo: Replace the schematics with the config value
         this.schematicFolder = minesumo.getDataDirectory().resolve("schematics");
         this.schematicFolder.toFile().mkdir();
         this.minesumo = minesumo;
@@ -71,10 +69,7 @@ public class SchematicHandler {
     }
 
     public CompletableFuture<MinesumoInstance> loadSchematic(MapConfig config) {
-        //if (mapConfigPredicate.test(config))
-        //            return CompletableFuture.completedFuture(null);
-
-        @NotNull CompletableFuture<Schematic> schematic;
+        CompletableFuture<Schematic> schematic;
         try {
             schematic = Scaffolding.fromPath(schematicFolder.resolve(config.getSchematicFile()));
         } catch (IOException | NBTException e) {

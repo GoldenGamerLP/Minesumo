@@ -1,8 +1,7 @@
 package me.alex.minesumo.instances;
 
+import lombok.Getter;
 import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.statistics.ArenaStatistics;
-import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.SharedInstance;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,17 +12,18 @@ public abstract class AbstractArena extends SharedInstance {
 
     public static final Duration
             roundStartingTime = Duration.ofSeconds(5),
-            roundProcessTime = Duration.ofMinutes(3),
-            roundEndingTime = Duration.ofSeconds(10);
-    protected final ArenaStatistics stats;
-
+            roundProcessTime = Duration.ofMinutes(5),
+            roundEndingTime = Duration.ofSeconds(25);
+    @Getter
     protected final MapConfig config;
+    @Getter
+    private final String gameID;
     protected Integer maxLives = null;
 
-    public AbstractArena(@NotNull UUID uniqueId, @NotNull InstanceContainer instanceContainer, @NotNull MapConfig config) {
+    public AbstractArena(@NotNull UUID uniqueId, @NotNull MinesumoInstance instanceContainer, @NotNull MapConfig config, String gameID) {
         super(uniqueId, instanceContainer);
         this.config = config;
-        this.stats = new ArenaStatistics(uniqueId);
+        this.gameID = gameID;
     }
 
     public Integer getMaxLives() {

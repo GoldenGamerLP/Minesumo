@@ -10,11 +10,11 @@ public class MinesumoMainConfig {
 
     @SerializedName("mapFolder")
     @Expose
-    private final String schematicFolder = "schematics";
+    private String schematicFolder = "schematics";
 
 
     @Expose
-    private final Integer minPlayersToStart = 2,
+    private Integer minPlayersToStart = 2,
             startingLives = 0,
             minLives = 0,
             maxLives = 3;
@@ -22,6 +22,14 @@ public class MinesumoMainConfig {
 
     @SerializedName("isEditorMode")
     @Expose
-    private final Boolean isInEditorMode = false;
+    private Boolean isInEditorMode = false;
+
+    @SerializedName("fastJoin")
+    @Expose
+    private Boolean fastJoin = false;
+
+    @SerializedName("mongoDB")
+    @Expose
+    private String mongoDB = "mongoDB";
 
 }

@@ -1,15 +1,16 @@
 package me.alex.minesumo;
 
 import lombok.extern.slf4j.Slf4j;
-import me.alex.minesumo.commands.ArenaCommand;
-import me.alex.minesumo.commands.ArenaSetupCommand;
-import me.alex.minesumo.commands.ForceLives;
-import me.alex.minesumo.commands.ForceStart;
+import me.alex.minesumo.commands.*;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
 import me.alex.minesumo.data.configuration.MinesumoMapConfig;
 import me.alex.minesumo.data.configuration.converter.PosConverter;
+import me.alex.minesumo.data.database.ArenaGameIDGenerator;
+import me.alex.minesumo.data.database.MongoDB;
+import me.alex.minesumo.data.database.StatisticDB;
+import me.alex.minesumo.data.statistics.StatisticFormatter;
+import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.listener.GlobalEventListener;
-import me.alex.minesumo.listener.PvPEvents;
 import me.alex.minesumo.map.MapCreator;
 import me.alex.minesumo.map.MapSelector;
 import me.alex.minesumo.map.SchematicHandler;
@@ -29,6 +30,11 @@ public class Minesumo extends Extension {
     private SchematicHandler schematicHandler;
     private MapCreator mapCreator;
     private MapSelector mapSelector;
+    private MongoDB mongoDB;
+    private StatisticDB statsHandler;
+    private ArenaGameIDGenerator gameIDGenerator;
+    private StatisticsManager statisticsManager;
+    private StatisticFormatter statisticFormatter;
 
     @Override
     public void preInitialize() {
@@ -55,26 +61,32 @@ public class Minesumo extends Extension {
         this.mapCFG.load();
         this.schematicHandler = new SchematicHandler(this);
 
-        log.info("Loaded configuration! \n Loading schematics...");
+        log.info("Loading Schematics...");
+        this.schematicHandler.loadSchematics().join();
+        log.info("Loaded schematics!");
 
-        this.schematicHandler.loadSchematics().whenComplete((unused, throwable) -> {
-            if (throwable != null) log.error("Error loading schematics", throwable);
-            log.info("Loaded map configurations!");
+        this.mongoDB = new MongoDB(this);
+        this.statsHandler = new StatisticDB(this);
+        this.gameIDGenerator = new ArenaGameIDGenerator(this);
 
-            this.mapCreator = new MapCreator(this);
-            this.mapSelector = new MapSelector(this);
+        //Other Map stuff and so on
+        this.mapCreator = new MapCreator(this);
+        this.mapSelector = new MapSelector(this);
+        this.statisticsManager = new StatisticsManager(this);
+        this.statisticFormatter = new StatisticFormatter(this);
 
-            hasStarted.set(true);
-            log.info("Enabled GlobalEventHandler! \n You can join now");
-        });
-
-        new ArenaCommand("debug", this);
-        new ArenaSetupCommand(this);
-        new ForceLives(this);
-        new ForceStart(this);
         new GlobalEventListener(this);
 
-        PvPEvents arenaEvents = new PvPEvents(this);
+        //TODO: only register debug command if editorMode is enabled
+        new ArenaCMD("debug", this);
+        new ArenaSetupCMD(this);
+        new ForceLivesCMD(this);
+        new ForceStartCMD(this);
+        new GameIdCMD(this);
+        new StatsCMD(this);
+
+        log.info("Minesumo has been initialized!");
+        hasStarted.set(true);
     }
 
     @Override
@@ -99,6 +111,14 @@ public class Minesumo extends Extension {
         return mapCFG.getData();
     }
 
+    public ArenaGameIDGenerator getGameIDGenerator() {
+        return gameIDGenerator;
+    }
+
+    public StatisticsManager getStatisticsManager() {
+        return statisticsManager;
+    }
+
     public SchematicHandler getSchematicLoader() {
         return schematicHandler;
     }
@@ -111,7 +131,19 @@ public class Minesumo extends Extension {
         return mapSelector;
     }
 
+    public MongoDB getMongoDB() {
+        return mongoDB;
+    }
+
     public boolean hasStarted() {
         return hasStarted.get();
+    }
+
+    public StatisticDB getStatsHandler() {
+        return statsHandler;
+    }
+
+    public StatisticFormatter getStatisticFormatter() {
+        return statisticFormatter;
     }
 }

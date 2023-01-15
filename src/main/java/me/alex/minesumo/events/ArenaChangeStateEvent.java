@@ -8,11 +8,9 @@ import org.jetbrains.annotations.NotNull;
 public class ArenaChangeStateEvent implements InstanceEvent {
 
     private final ArenaImpl arenaImpl;
-    private final ArenaImpl.ArenaState state;
 
     public ArenaChangeStateEvent(ArenaImpl arenaImpl, ArenaImpl.ArenaState before) {
         this.arenaImpl = arenaImpl;
-        this.state = before;
     }
 
     @Override

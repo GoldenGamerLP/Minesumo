@@ -1,42 +1,51 @@
 package me.alex.minesumo.data.statistics;
 
 import com.google.gson.annotations.Expose;
-import kotlin.Pair;
 import lombok.Data;
-import lombok.Getter;
+import me.alex.minesumo.events.ArenaEndEvent;
 
-import java.time.Instant;
 import java.util.*;
 
 @Data
 public final class ArenaStatistics {
 
     @Expose
-    @Getter
-    final UUID sessionID;
+    private final String sessionID;
 
     @Expose
-    @Getter
-    List<UUID> participants;
-
+    private final List<UUID> participants;
     @Expose
-    @Getter
-    Instant start, stop;
-
+    private final List<KillAndDeathHistory> killsAndDeathHistory;
     @Expose
-    @Getter
-    Map<Instant, Pair<UUID, UUID>> killsAndDeathHistory;
+    private final List<UUID> winners;
+    @Expose
+    private Date start, stop;
+    @Expose
+    private ArenaEndEvent.EndState endState;
 
-    public ArenaStatistics(UUID uuid) {
-        this.sessionID = uuid;
+    public ArenaStatistics(String uid) {
+        this.sessionID = uid;
 
         this.participants = new ArrayList<>();
-        this.killsAndDeathHistory = new HashMap<>();
-        this.start = Instant.now();
+        this.killsAndDeathHistory = new LinkedList<>();
+        this.winners = new ArrayList<>();
     }
 
-    public ArenaStatistics close() {
-        this.stop = Instant.now();
-        return this;
+    @Data
+    public static class KillAndDeathHistory {
+        @Expose
+        private final UUID dead;
+
+        @Expose
+        private final UUID attacker;
+
+        @Expose
+        private final Date time;
+
+        public KillAndDeathHistory(UUID player, UUID attacker, Date from) {
+            this.dead = player;
+            this.attacker = attacker;
+            this.time = from;
+        }
     }
 }

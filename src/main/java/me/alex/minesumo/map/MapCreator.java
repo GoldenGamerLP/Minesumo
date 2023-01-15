@@ -1,12 +1,12 @@
 package me.alex.minesumo.map;
 
-import dev.hypera.scaffolding.instance.SchematicChunkLoader;
+import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.database.ArenaGameIDGenerator;
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.instances.MinesumoInstance;
 import net.minestom.server.coordinate.Pos;
-import net.minestom.server.instance.IChunkLoader;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@Slf4j
 public class MapCreator {
     private final ConcurrentMap<MapConfig, MinesumoInstance> activeMaps;
     private final ConcurrentMap<MapConfig, List<CompletableFuture<ArenaImpl>>> activeCalls;
@@ -22,19 +23,28 @@ public class MapCreator {
     public MapCreator(Minesumo minesumo) {
         this.activeMaps = new ConcurrentHashMap<>();
         this.activeCalls = new ConcurrentHashMap<>();
+        this.idGenerator = minesumo.getGameIDGenerator();
 
-        minesumo.getSchematicLoader().getLoadedMapConfigs().forEach(mapConfig -> {
-            MinesumoInstance instance = activeMaps.computeIfAbsent(mapConfig, mapConfig1 ->
-                            new MinesumoInstance(mapConfig));
+        if (minesumo.getConfig().getFastJoin()) preLoadMaps(minesumo.getSchematicLoader());
+    }
 
-            IChunkLoader loader = SchematicChunkLoader.builder()
-                    .addSchematic(mapConfig.getMapSchematic())
-                    .saveHandler(chunk -> CompletableFuture.completedFuture(null))
-                    .offset(pastePos.blockX(),pastePos.blockY(),pastePos.blockZ())
-                    .build();
+    private CompletableFuture<Void> preLoadMaps(SchematicHandler loader) {
+        log.info("Starting pasting of schematics (Fast Join). This can take a while.");
 
-            instance.setChunkLoader(loader);
-            System.out.println("Created map!");
+        CompletableFuture<Long> time = CompletableFuture.completedFuture(System.currentTimeMillis());
+        List<CompletableFuture<?>> calls = new ArrayList<>();
+
+        loader.getLoadedMapConfigs().forEach(mapConfig -> {
+            MinesumoInstance instance = activeMaps
+                    .computeIfAbsent(mapConfig,
+                            mapConfig1 -> new MinesumoInstance(mapConfig));
+
+            calls.add(mapConfig.getMapSchematic().build(instance, pastePos));
+        });
+
+        return CompletableFuture.allOf(calls.toArray(CompletableFuture[]::new)).thenRun(() -> {
+            long ms = System.currentTimeMillis() - time.join();
+            log.info("Done Pre-Loading Maps and Schematics. In {} ms", ms);
         });
     }
 
@@ -46,15 +56,11 @@ public class MapCreator {
         });
     }
 
-    public ArenaImpl getMapNow(MapConfig config) {
-        return this.activeMaps.get(config).createCopy();
-    }
-
 
     public CompletableFuture<ArenaImpl> getMap(MapConfig mapConfig) {
         if (activeMaps.containsKey(mapConfig))
-            return CompletableFuture
-                    .completedFuture(activeMaps.get(mapConfig).createCopy());
+            return idGenerator.getSafeArenaUID()
+                    .thenApply(gameID -> activeMaps.get(mapConfig).createCopy(gameID));
 
 
         //Putting a call to the queue, which will later be completed
@@ -83,15 +89,11 @@ public class MapCreator {
         this.activeCalls.put(mapConfig, new ArrayList<>(List.of(waitingCall)));
 
         //Pasting schematic, after pasted complete every request and give back shared instance
-        IChunkLoader loader = SchematicChunkLoader.builder()
-                .addSchematic(mapConfig.getMapSchematic())
-                .saveHandler(chunk -> CompletableFuture.completedFuture(null))
-                .offset(pastePos.blockX(),pastePos.blockY(),pastePos.blockZ())
-                .build();
+        mapConfig.getMapSchematic().build(instance, pastePos).thenAcceptAsync(region -> {
+            activeCalls.get(mapConfig).forEach(
+                    queue -> idGenerator.getSafeArenaUID().thenAccept(
+                            s -> queue.complete(instance.createCopy(s))));
 
-        instance.setChunkLoader(loader);
-        instance.scheduleNextTick(instance1 -> {
-            activeCalls.get(mapConfig).forEach(queue -> queue.complete(instance.createCopy()));
             activeCalls.remove(mapConfig).clear();
         });
 

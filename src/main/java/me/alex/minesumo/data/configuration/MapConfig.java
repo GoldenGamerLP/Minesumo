@@ -3,18 +3,14 @@ package me.alex.minesumo.data.configuration;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import dev.hypera.scaffolding.schematic.Schematic;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.Data;
 import net.minestom.server.coordinate.Pos;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Setter
-@Getter
-@RequiredArgsConstructor
-public class MapConfig implements Cloneable {
+@Data
+public class MapConfig {
 
     @Expose(deserialize = false, serialize = false)
     private Schematic mapSchematic = null;
@@ -46,14 +42,4 @@ public class MapConfig implements Cloneable {
     @SerializedName("spectatorPosition")
     @Expose
     private Pos spectatorPosition = Pos.ZERO;
-
-    @Override
-    public MapConfig clone() {
-        try {
-            MapConfig clone = (MapConfig) super.clone();
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
-        }
-    }
 }
