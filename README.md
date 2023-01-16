@@ -1,4 +1,4 @@
-# Minesumo [![CodeFactor](https://www.codefactor.io/repository/github/goldengamerlp/minesumo/badge)](https://www.codefactor.io/repository/github/goldengamerlp/minesumo)
+# Minesumo [![CodeFactor](https://www.codefactor.io/repository/github/goldengamerlp/minesumo/badge)](https://www.codefactor.io/repository/github/goldengamerlp/minesumo) [![Java CI with Gradle and Upload](https://github.com/GoldenGamerLP/Minesumo/actions/workflows/gradle_build.yml/badge.svg)](https://github.com/GoldenGamerLP/Minesumo/actions/workflows/gradle_build.yml)
 
 ## Abstract
 
