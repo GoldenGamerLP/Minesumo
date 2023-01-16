@@ -2,7 +2,7 @@
 
 ## Abstract
 
-This is a Minecraft plugin for Sumo tournaments. The plugin was developed for [Minestom](https://github.com/Minestom/Minestom).
+This is a Minecraft extension for the gamemode **Sumo**. The plugin was developed for [Minestom](https://github.com/Minestom/Minestom).
 
 
 ## Features
