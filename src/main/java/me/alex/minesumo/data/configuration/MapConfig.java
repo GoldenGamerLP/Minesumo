@@ -2,8 +2,8 @@ package me.alex.minesumo.data.configuration;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import dev.hypera.scaffolding.schematic.Schematic;
 import lombok.Data;
+import net.hollowcube.util.schem.Schematic;
 import net.minestom.server.coordinate.Pos;
 
 import java.util.ArrayList;

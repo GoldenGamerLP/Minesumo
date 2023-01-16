@@ -6,6 +6,7 @@ import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.database.ArenaGameIDGenerator;
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.instances.MinesumoInstance;
+import me.alex.minesumo.utils.SchematicUtils;
 import net.minestom.server.coordinate.Pos;
 
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ public class MapCreator {
                     .computeIfAbsent(mapConfig,
                             mapConfig1 -> new MinesumoInstance(mapConfig));
 
-            calls.add(mapConfig.getMapSchematic().build(instance, pastePos));
+            calls.add(SchematicUtils.pasteSchematic(mapConfig.getMapSchematic(), instance, pastePos));
         });
 
         return CompletableFuture.allOf(calls.toArray(CompletableFuture[]::new)).thenRun(() -> {
@@ -52,7 +53,7 @@ public class MapCreator {
     public CompletableFuture<MinesumoInstance> getEditorMap(MapConfig mapConfig) {
         return CompletableFuture.supplyAsync(() -> {
             MinesumoInstance instance = new MinesumoInstance(mapConfig);
-            mapConfig.getMapSchematic().build(instance, pastePos).join();
+            SchematicUtils.pasteSchematic(mapConfig.getMapSchematic(), instance, pastePos).join();
             return instance;
         });
     }
@@ -90,7 +91,9 @@ public class MapCreator {
         this.activeCalls.put(mapConfig, new ArrayList<>(List.of(waitingCall)));
 
         //Pasting schematic, after pasted complete every request and give back shared instance
-        mapConfig.getMapSchematic().build(instance, pastePos).thenAcceptAsync(region -> {
+        CompletableFuture<Void> paste = SchematicUtils.pasteSchematic(mapConfig.getMapSchematic(), instance, pastePos);
+
+        paste.thenAccept(region -> {
             activeCalls.get(mapConfig).forEach(
                     queue -> idGenerator.getSafeArenaUID().thenAccept(
                             s -> queue.complete(instance.createCopy(s))));

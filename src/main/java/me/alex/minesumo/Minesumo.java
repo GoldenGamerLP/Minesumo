@@ -12,7 +12,7 @@ import me.alex.minesumo.data.statistics.StatisticFormatter;
 import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.listener.GlobalEventListener;
 import me.alex.minesumo.map.MapCreator;
-import me.alex.minesumo.map.MapSelector;
+import me.alex.minesumo.map.MapSelection;
 import me.alex.minesumo.map.SchematicHandler;
 import me.alex.minesumo.messages.MinesumoMessages;
 import me.alex.minesumo.utils.JsonConfigurationLoader;
@@ -29,12 +29,12 @@ public class Minesumo extends Extension {
     private JsonConfigurationLoader<MinesumoMapConfig> mapCFG;
     private SchematicHandler schematicHandler;
     private MapCreator mapCreator;
-    private MapSelector mapSelector;
     private MongoDB mongoDB;
     private StatisticDB statsHandler;
     private ArenaGameIDGenerator gameIDGenerator;
     private StatisticsManager statisticsManager;
     private StatisticFormatter statisticFormatter;
+    private MapSelection mapSelection;
 
     @Override
     public void preInitialize() {
@@ -72,16 +72,17 @@ public class Minesumo extends Extension {
 
         //Other Map stuff and so on
         this.mapCreator = new MapCreator(this);
-        this.mapSelector = new MapSelector(this);
         this.statisticsManager = new StatisticsManager(this);
         this.statisticFormatter = new StatisticFormatter(this);
+        this.mapSelection = new MapSelection(this);
 
         new GlobalEventListener(this);
 
-        if (getConfig().getIsInEditorMode())
+        if (getConfig().getIsInEditorMode()) {
+            new ArenaSetupCMD(this);
             new ArenaCMD("debug", this);
+        }
 
-        new ArenaSetupCMD(this);
         new ForceLivesCMD(this);
         new ForceStartCMD(this);
         new GameIdCMD(this);
@@ -125,12 +126,12 @@ public class Minesumo extends Extension {
         return schematicHandler;
     }
 
-    public MapCreator getMapCreator() {
-        return mapCreator;
+    public MapSelection getMapSelection() {
+        return mapSelection;
     }
 
-    public MapSelector getMapManager() {
-        return mapSelector;
+    public MapCreator getMapCreator() {
+        return mapCreator;
     }
 
     public MongoDB getMongoDB() {

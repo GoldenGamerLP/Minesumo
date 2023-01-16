@@ -1,7 +1,6 @@
 package me.alex.minesumo.listener;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.statistics.PlayerStatistics;
 import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.events.ArenaChangeStateEvent;
@@ -9,7 +8,6 @@ import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.events.PlayerDeathEvent;
 import me.alex.minesumo.events.TeamEliminatedEvent;
 import me.alex.minesumo.instances.ArenaImpl;
-import me.alex.minesumo.map.MapSelector;
 import me.alex.minesumo.messages.Messages;
 import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.text.Component;
@@ -25,9 +23,8 @@ import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 public class GlobalEventListener {
 
@@ -57,20 +54,7 @@ public class GlobalEventListener {
                 return;
             }
 
-            Optional<MapConfig> mpf = minesumo
-                    .getMapManager()
-                    .selectMap(MapSelector.ALL_MAPS, MapSelector.MapSelectionStrategy.RANDOM_RESULT);
-
-            mpf.ifPresentOrElse(mapConfig -> {
-                CompletableFuture<ArenaImpl> instance = minesumo.getMapManager()
-                        .getAvailableMap(
-                                mapConfig,
-                                ArenaImpl.ArenaState.WAITING_FOR_PLAYERS);
-
-                //For Performance reasons
-                if (instance.isDone()) playerLoginEvent.setSpawningInstance(instance.join());
-                else instance.thenAccept(arena -> minesumo.getMapManager().queueArena(player, arena));
-            }, () -> player.kick("No map found"));
+            minesumo.getMapSelection().addPlayersToQueue(List.of(player));
         });
 
         gl.addListener(ArenaEndEvent.class, event -> {
@@ -89,6 +73,7 @@ public class GlobalEventListener {
             statsMng.arenaEnd(instance.getGameID(), event.getState(), event.getWinningPlayers());
             instance.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).forEach(pls -> minesumo.getStatsHandler()
                     .getPlayerCache()
+                    //Why NPE? I have no idea.
                     .getIfPresent(pls.getUuid()).thenAccept(pl -> {
 
                         int kills = pl.getKills();

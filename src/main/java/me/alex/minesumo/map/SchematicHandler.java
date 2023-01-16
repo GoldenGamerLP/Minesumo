@@ -1,16 +1,14 @@
 package me.alex.minesumo.map;
 
-import dev.hypera.scaffolding.Scaffolding;
-import dev.hypera.scaffolding.schematic.Schematic;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
 import me.alex.minesumo.data.configuration.MinesumoMapConfig;
 import me.alex.minesumo.instances.MinesumoInstance;
-import org.jglrxavpok.hephaistos.nbt.NBTException;
+import me.alex.minesumo.utils.SchematicUtils;
+import net.hollowcube.util.schem.Schematic;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
@@ -71,12 +69,8 @@ public class SchematicHandler {
     }
 
     public CompletableFuture<MinesumoInstance> loadSchematic(MapConfig config) {
-        CompletableFuture<Schematic> schematic;
-        try {
-            schematic = Scaffolding.fromPath(schematicFolder.resolve(config.getSchematicFile()));
-        } catch (IOException | NBTException e) {
-            return CompletableFuture.failedFuture(e);
-        }
+        CompletableFuture<Schematic> schematic = CompletableFuture.supplyAsync(
+                () -> SchematicUtils.ofPath(schematicFolder.resolve(config.getSchematicFile())));
 
         return schematic.thenApply(schematic1 -> {
             if (schematic1 == null) return null;
@@ -99,18 +93,11 @@ public class SchematicHandler {
         AtomicInteger index = new AtomicInteger(0);
         for (MapConfig config : currentConfigs) {
 
+            //Maybe optimize it in the future. Own library?
             schematicLoading[index.getAndIncrement()] = CompletableFuture
                     .completedFuture(config)
                     .thenApply(mapConfig -> schematicFolder.resolve(mapConfig.getSchematicFile()))
-                    .thenComposeAsync(path -> {
-                        //Maybe optimize it in the future. Own library?
-                        try {
-                            return Scaffolding.fromPath(path);
-                        } catch (IOException | NBTException e) {
-                            log.warn("Error while loading schematic: {}", path, e);
-                            return CompletableFuture.failedFuture(e);
-                        }
-                    })
+                    .thenApplyAsync(SchematicUtils::ofPath)
                     .thenAccept(config::setMapSchematic)
                     .thenRun(() -> {
                         log.info("Added schematic {}", config.getSchematicFile());

@@ -6,7 +6,6 @@ import me.alex.minesumo.utils.FullbrightDimension;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceContainer;
 
-import java.time.Duration;
 import java.util.UUID;
 
 @Slf4j
@@ -28,13 +27,9 @@ public class MinesumoInstance extends InstanceContainer {
     }
 
     private void basicArenaSetup() {
-        this.setTimeUpdate(Duration.ofSeconds(1));
-        this.setTime(0);
+        this.setTime(6000);
         this.setTimeRate(0);
-
-        this.getWorldBorder().setCenter(0, 0);
-        this.getWorldBorder().setDiameter(this.config.getMapSchematic().getLength());
-        this.getWorldBorder().setWarningBlocks(1);
+        this.setTimeUpdate(null);
     }
 
     public MapConfig getConfig() {
