@@ -20,7 +20,7 @@ This is a Minecraft extension for the gamemode **Sumo**. The plugin was develope
 - [x] **Easy to setup!**
 
 ## Setup
-1. Download the lastest version of the [**extension**](https://github.com/GoldenGamerLP/Minesumo/actions)
+1. Download the lastest version of the [**extension**](https://nightly.link/GoldenGamerLP/Minesumo/workflows/gradle_build/master/artifact.zip)
 2. Use a **Minestom** Server of your choice
 3. Put the extension in the **extensions** folder
 4. **Start the server**
