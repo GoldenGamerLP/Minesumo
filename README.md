@@ -5,7 +5,7 @@
 This is a Minecraft extension for the gamemode **Sumo**. The plugin was developed for [Minestom](https://github.com/Minestom/Minestom).
 
 ## Download Link
-- ![Latest Build of Minesumo](https://nightly.link/GoldenGamerLP/Minesumo/workflows/gradle_build/master/artifact.zip)
+- [Latest Build of Minesumo](https://nightly.link/GoldenGamerLP/Minesumo/workflows/gradle_build/master/artifact.zip)
 
 ## Features
 
