@@ -15,6 +15,7 @@ public enum Messages {
     GAME_TEAM_DEATH("message.game.death.final", true),
     GAME_DEATH("message.game.death", true),
     GAME_DEATH_PLAYER("message.game.death.player", true),
+    GAME_TEAM_ENTRY("message.game.team", false),
 
     /*
      * Commands

@@ -3,8 +3,11 @@ package me.alex.minesumo.tasks;
 import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.messages.Messages;
+import me.alex.minesumo.utils.StringUtils;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 
@@ -31,26 +34,25 @@ public class RoundProcessTask extends AbstractTask {
         if (seconds == 0)
             this.cancel();
 
-        //TODO: Add the message to the config
-        //TODO: Think about a new design which is not so ugly and big
-        StringBuilder sb = new StringBuilder();
         Integer[] lifes = arena.getLives();
+        TextComponent.Builder builder = Component.text();
 
         for (Integer livingTeam : arena.getLivingTeams()) {
             List<Player> players = arena.getPlayersFromTeam(livingTeam);
-            sb.append("Team: ");
-            sb.append(livingTeam);
-            sb.append(" - Lives: ");
-            sb.append(lifes[livingTeam]);
-            sb.append(" - Players:");
-            if (players.size() == 0) sb.append("None");
-            else sb.append(players.size() == 1 ? players.get(0).getUsername() : players.size());
+            String player = players.size() > 1 ? players.size() + "" : StringUtils.getFirstXLetters(players.get(0).getUsername(), 9);
+            String team = livingTeam + "";
+            String lives = lifes[livingTeam] + "";
 
-            if (livingTeam > lifes.length - 1) sb.append(" | ");
+            builder.append(Messages.GAME_TEAM_ENTRY.toTranslatable(
+                    Component.text(team).color(NamedTextColor.GOLD),
+                    Component.text(lives).color(NamedTextColor.YELLOW),
+                    Component.text(player).color(NamedTextColor.YELLOW)
+            ));
+            builder.append(Component.space());
         }
 
         BossBar bar = arena.getGameBar();
-        bar.name(Component.translatable(sb.toString()));
+        bar.name(builder);
         bar.progress((seconds * 1000F) / roundProcessTime.toMillis());
         bar.color(BossBar.Color.WHITE);
 

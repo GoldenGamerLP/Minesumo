@@ -71,7 +71,7 @@ public class GlobalEventListener {
             } else component = Messages.GAME_DRAW.toTranslatable();
 
             statsMng.arenaEnd(instance.getGameID(), event.getState(), event.getWinningPlayers());
-            instance.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).forEach(pls -> minesumo.getStatsHandler()
+            instance.getPlayers().forEach(pls -> minesumo.getStatsHandler()
                     .getPlayerCache()
                     //Why NPE? I have no idea.
                     .getIfPresent(pls.getUuid()).thenAccept(pl -> {

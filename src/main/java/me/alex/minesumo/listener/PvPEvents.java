@@ -73,8 +73,8 @@ public class PvPEvents {
         // Randomize direction
         ThreadLocalRandom random = ThreadLocalRandom.current();
         while (dx * dx + dz * dz < 0.0001) {
-            dx = random.nextDouble(-1, 1) * 0.01;
-            dz = random.nextDouble(-1, 1) * 0.01;
+            dx = random.nextDouble(-1, 1) * 0.025;
+            dz = random.nextDouble(-1, 1) * 0.025;
         }
 
         double finalDx = dx;
@@ -83,15 +83,20 @@ public class PvPEvents {
         float kbResistance = 0;
         double horizontal = settings.horizontal() * (1 - kbResistance) + extraHorizontal;
         double vertical = settings.vertical() * (1 - kbResistance);
+
+        if (vertical + entity.getVelocity().y() > settings.verticalLimit()) {
+            vertical = settings.verticalLimit() - entity.getVelocity().y();
+        }
+
         Vec horizontalModifier = new Vec(finalDx, finalDz).normalize().mul(horizontal);
 
 
         Vec velocity = entity.getVelocity();
         entity.setVelocity(new Vec(
-                velocity.x() / 2d - horizontalModifier.x(),
+                velocity.x() / 0.4d - horizontalModifier.x(),
                 entity.isOnGround() ? Math.min(
-                        settings.verticalLimit(), velocity.y() + vertical + settings.extraVertical()) : velocity.y(),
-                velocity.z() / 2d - horizontalModifier.z()
+                        settings.verticalLimit(), velocity.y() + vertical + settings.extraVertical()) : velocity.y() + vertical,
+                velocity.z() / 0.4d - horizontalModifier.z()
         ));
     }
 

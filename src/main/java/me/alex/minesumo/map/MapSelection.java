@@ -6,7 +6,9 @@ import me.alex.minesumo.instances.ArenaImpl;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.timer.TaskSchedule;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -51,16 +53,20 @@ public class MapSelection {
 
     }
 
-    public Predicate<MapConfig> getMapWithSize(int size) {
+    private Predicate<MapConfig> getMapWithSize(int size) {
         return mapConfig -> mapConfig.getSpawnPositions().size()
                 * mapConfig.getPlayerPerSpawnPosition() >= size;
     }
 
     private void queuePlayers(Instance instance, List<Player> queue) {
-        instance.scheduler().scheduleNextTick(() -> {
-            for (Player player : queue) {
-                player.setInstance(instance);
-            }
-        });
+        Iterator<Player> iterator = queue.iterator();
+
+        instance.scheduler().scheduleTask(() -> {
+            if (!iterator.hasNext()) return;
+
+
+            Player player = iterator.next();
+            player.setInstance(instance);
+        }, TaskSchedule.tick(1), TaskSchedule.tick(1));
     }
 }
