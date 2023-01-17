@@ -43,7 +43,7 @@ jobs:
       run: ./gradlew shadowJar
       
     - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3.1.0
       with:
-        name: Minesumo
-        path: build/libs/ # or path/to/artifact 
+        path: build/libs
+        retention-days: 120
