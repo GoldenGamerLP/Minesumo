@@ -6,6 +6,7 @@ import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.messages.Messages;
 import me.alex.minesumo.utils.ListUtils;
 import me.alex.minesumo.utils.MojangUtils;
+import me.alex.minesumo.utils.StringUtils;
 import me.alex.minesumo.utils.TimeUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
@@ -77,7 +78,7 @@ public class StatisticFormatter {
         String start = TimeUtils.formatDate(statistics.getStart(), Locale.getDefault());
         String endState = statistics.getEndState().name();
         TextColor color = statistics.getEndState() == ArenaEndEvent.EndState.WIN ?
-                TextColor.color(0xFF1C) : TextColor.color(0xFF005D);
+                TextColor.color(0xFF1C) : TextColor.color(0xFF0000);
 
 
         TextComponent.Builder deathAndKillHistory = Component.text().appendNewline();
@@ -121,9 +122,12 @@ public class StatisticFormatter {
 
             for (int i = 0; i < players.size(); i++) {
                 String player = players.get(i);
+                int position = i + 1;
+                //format the position to always be 3 digits with 000 without using StringUtils
+                String pos = String.format("%03d", position);
                 builder.append(Messages.GENERAL_STATS_GLOBAL_ENTRY
                                 .toTranslatable(
-                                        Component.text(i + 1).color(NamedTextColor.GOLD),
+                                        Component.text(pos).color(NamedTextColor.GOLD),
                                         Component.text(player).color(NamedTextColor.YELLOW)
                                 ))
                         .appendNewline();
@@ -148,14 +152,14 @@ public class StatisticFormatter {
                 "NaN" : playerStats.getGamesPlayed().get(0);
 
         return Messages.GENERAL_STATS_PLAYER.toTranslatable(
-                Component.text(name).color(TextColor.color(0xFFC208)),
+                Component.text(name).color(NamedTextColor.GOLD),
                 Component.text(ranking).color(NamedTextColor.YELLOW),
                 Component.text(kills).color(NamedTextColor.YELLOW),
                 Component.text(death).color(NamedTextColor.YELLOW),
-                Component.text(String.format("%1.2f", kd)).color(NamedTextColor.YELLOW),
+                Component.text(StringUtils.formatNumber(kd)).color(NamedTextColor.YELLOW),
                 Component.text(gamesWon).color(NamedTextColor.YELLOW),
                 Component.text(loses).color(NamedTextColor.YELLOW),
-                Component.text(String.format("%1.2f", wl)).color(NamedTextColor.YELLOW),
+                Component.text(StringUtils.formatNumber(wl)).color(NamedTextColor.YELLOW),
                 Component.text(gamesPlayed).color(NamedTextColor.YELLOW),
                 Component.text(lastPlayedGame).color(NamedTextColor.YELLOW)
         );

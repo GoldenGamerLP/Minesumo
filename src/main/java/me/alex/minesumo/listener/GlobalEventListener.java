@@ -8,7 +8,6 @@ import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.events.PlayerDeathEvent;
 import me.alex.minesumo.events.TeamEliminatedEvent;
 import me.alex.minesumo.instances.ArenaImpl;
-import me.alex.minesumo.messages.HeadChat;
 import me.alex.minesumo.messages.Messages;
 import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.text.Component;
@@ -16,11 +15,13 @@ import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.GlobalEventHandler;
-import net.minestom.server.event.player.*;
+import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
+import net.minestom.server.event.player.PlayerDisconnectEvent;
+import net.minestom.server.event.player.PlayerLoginEvent;
+import net.minestom.server.event.player.PlayerMoveEvent;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.block.Block;
-import net.minestom.server.resourcepack.ResourcePack;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,10 +29,6 @@ import java.util.UUID;
 import static net.kyori.adventure.text.Component.text;
 
 public class GlobalEventListener {
-
-    public static ResourcePack rsPack = ResourcePack.forced(
-            "https://resourcepack.host/dl/qhFR9Ub926IGAdWfXaFBa4NTjEAZcthu/HeadsInChat+%281%29.zip",
-            "6FACFFA13FBA481DEF8D3D0C35DEA6EF21EEBF8B");
     private final InstanceContainer container;
 
     public GlobalEventListener(Minesumo minesumo) {
@@ -58,21 +55,7 @@ public class GlobalEventListener {
                 return;
             }
 
-            player.setResourcePack(rsPack);
-
             minesumo.getMapSelection().addPlayersToQueue(List.of(player));
-        });
-
-        gl.addListener(PlayerSpawnEvent.class, event -> {
-            //set resourecpack
-            event.getPlayer().setResourcePack(rsPack);
-        });
-
-        gl.addListener(PlayerChatEvent.class, event -> {
-            //send message with head in chat
-            event.setCancelled(true);
-            Component message = HeadChat.getHead(event.getPlayer()).append(text("\uF008 " + event.getPlayer().getUsername() + ": " + event.getMessage()));
-            event.getPlayer().getInstance().sendMessage(message);
         });
 
         gl.addListener(ArenaEndEvent.class, event -> {
