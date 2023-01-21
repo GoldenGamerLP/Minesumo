@@ -9,7 +9,6 @@ import java.util.UUID;
 
 @Data
 public final class PlayerStatistics {
-
     @Expose
     private final UUID playerID;
     @Expose
@@ -26,6 +25,18 @@ public final class PlayerStatistics {
         this.playerID = playerID;
         this.lastName = knownName;
         this.gamesPlayed = new LinkedList<>();
+    }
+
+    @Override
+    public String toString() {
+        return "PlayerStatistics{" +
+                "playerID=" + playerID +
+                ", gamesPlayed=" + gamesPlayed.size() +
+                ", lastName='" + lastName + '\'' +
+                ", kills=" + kills +
+                ", deaths=" + deaths +
+                ", wins=" + wins +
+                '}';
     }
 }
 

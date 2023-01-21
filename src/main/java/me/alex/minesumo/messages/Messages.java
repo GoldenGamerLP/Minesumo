@@ -33,7 +33,11 @@ public enum Messages {
     GENERAL_NOT_FOUND("message.general.notfound", true),
     GENERAL_STATS_PLAYER("message.general.stats.player", true),
     GENERAL_STATS_ARENA("message.general.stats.arena", true),
-    GENERAL_STATS_ARENA_HISTORY("message.general.stats.killAndDeathEntry", false);
+    GENERAL_STATS_ARENA_HISTORY("message.general.stats.killAndDeathEntry", false),
+
+    GENERAL_STATS_GLOBAL_TITLE("message.general.stats.global.title", true),
+
+    GENERAL_STATS_GLOBAL_ENTRY("message.general.stats.global.entry", false);
 
     private final String key;
     private final Boolean prefix;

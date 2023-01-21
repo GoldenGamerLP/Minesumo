@@ -101,7 +101,7 @@ public class StatisticFormatter {
         }
 
         return Messages.GENERAL_STATS_ARENA.toTranslatable(
-                Component.text(gameID).color(TextColor.color(0xFFC208)),
+                Component.text(gameID).color(NamedTextColor.GOLD),
                 Component.text(players).color(NamedTextColor.YELLOW),
                 Component.text(start).color(NamedTextColor.YELLOW),
                 Component.text(duration).color(NamedTextColor.YELLOW),
@@ -110,7 +110,29 @@ public class StatisticFormatter {
                 deathAndKillHistory.build());
     }
 
+    //Generate a component of the top 100 players
+    public CompletableFuture<Component> getTopPlayers(int limit) {
+        return this.handler.getTopPlayers(limit).thenApply(players -> {
+            TextComponent.Builder builder = Component.text();
+            builder.append(Messages.GENERAL_STATS_GLOBAL_TITLE
+                    .toTranslatable(
+                            Component.text(limit).color(NamedTextColor.GOLD)
+                    )).appendNewline();
 
+            for (int i = 0; i < players.size(); i++) {
+                String player = players.get(i);
+                builder.append(Messages.GENERAL_STATS_GLOBAL_ENTRY
+                                .toTranslatable(
+                                        Component.text(i + 1).color(NamedTextColor.GOLD),
+                                        Component.text(player).color(NamedTextColor.YELLOW)
+                                ))
+                        .appendNewline();
+            }
+            return builder.build();
+        });
+    }
+
+    //Get the ranking of a player from mongodb
     Component formatPlayerStats(PlayerStatistics playerStats) {
         String name = playerStats.getLastName();
         int kills = playerStats.getKills();
@@ -118,6 +140,8 @@ public class StatisticFormatter {
         int gamesPlayed = playerStats.getGamesPlayed().size();
         int gamesWon = playerStats.getWins();
         int loses = gamesPlayed - gamesWon;
+        long ranking = this.handler.getPlayers().join() -
+                (this.handler.getPlayerRanking(playerStats.getPlayerID()).join() - 1);
         double kd = (double) kills / (double) death;
         double wl = (double) gamesWon / (double) gamesPlayed;
         String lastPlayedGame = playerStats.getGamesPlayed().size() == 0 ?
@@ -125,6 +149,7 @@ public class StatisticFormatter {
 
         return Messages.GENERAL_STATS_PLAYER.toTranslatable(
                 Component.text(name).color(TextColor.color(0xFFC208)),
+                Component.text(ranking).color(NamedTextColor.YELLOW),
                 Component.text(kills).color(NamedTextColor.YELLOW),
                 Component.text(death).color(NamedTextColor.YELLOW),
                 Component.text(String.format("%1.2f", kd)).color(NamedTextColor.YELLOW),

@@ -16,12 +16,10 @@ import me.alex.minesumo.utils.JsonConfigurationLoader;
 import me.alex.minesumo.utils.MojangUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
@@ -35,17 +33,29 @@ public class StatisticDB {
     private static final String
             arenaDBName = "arena-stats",
             playerDBName = "player-stats";
-
-
+    private static final Bson ranking = new Document("$project", new Document()
+            .append("lastName", "$lastName")
+            .append("playerID", "$playerID")
+            .append("ratio", new Document()
+                    .append("$divide", Arrays.asList(
+                            new Document("$cond", Arrays.asList(
+                                    new Document("$eq", Arrays.asList("$kills", 0)),
+                                    1,
+                                    "$kills"
+                            )),
+                            new Document("$cond", Arrays.asList(
+                                    new Document("$eq", Arrays.asList("$deaths", 0)),
+                                    1,
+                                    "$deaths"
+                            ))
+                    ))
+            ));
     @Getter
     private final MongoCollection<Document> arenaDB;
-
     @Getter
     private final MongoCollection<Document> playerDB;
-
     @Getter
     private final AsyncLoadingCache<UUID, PlayerStatistics> playerCache;
-
     @Getter
     private final AsyncLoadingCache<String, ArenaStatistics> arenaCache;
 
@@ -61,7 +71,7 @@ public class StatisticDB {
         AsyncCacheLoader<String, ArenaStatistics> loadArena = (key, cause) -> getOrCreateArenaStatistics(key);
         this.arenaCache = Caffeine.newBuilder()
                 .removalListener(removeArena)
-                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .expireAfterWrite(15, TimeUnit.MINUTES)
                 .executor(ForkJoinPool.commonPool())
                 .buildAsync(loadArena);
 
@@ -70,9 +80,21 @@ public class StatisticDB {
         RemovalListener<UUID, PlayerStatistics> remPL = (key, value, cause) -> saveUser(key, value);
         this.playerCache = Caffeine.newBuilder()
                 .removalListener(remPL)
-                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .expireAfterWrite(15, TimeUnit.MINUTES)
                 .executor(ForkJoinPool.commonPool())
                 .buildAsync(loadingPL);
+    }
+
+    public static Bson playerFilter(UUID uuid) {
+        return eq("playerID", uuid.toString());
+    }
+
+    public static Bson playerFilter(String name) {
+        return eq("lastName", name);
+    }
+
+    public static Bson arenaFilter(String uid) {
+        return eq("sessionID", uid);
     }
 
     @NotNull
@@ -124,6 +146,49 @@ public class StatisticDB {
         return future;
     }
 
+    public CompletableFuture<Long> getPlayerRanking(UUID uuid) {
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerStatistics stats = getPlayerCache().get(uuid).join();
+            if (stats == null) return 0L;
+            double kd = (stats.getKills() == 0 ? 1 : stats.getKills()) / (stats.getDeaths() == 0 ? 1D : stats.getDeaths());
+
+            Bson sum = new Document("$group", new Document()
+                    .append("_id", null)
+                    .append("count", new Document("$sum", new Document("$cond", Arrays.asList(
+                                    new Document("$lt", Arrays.asList("$ratio", kd)),
+                                    1,
+                                    0
+                            )))
+                    ));
+            Document dc = this.playerDB.aggregate(Arrays.asList(ranking, sum)).first();
+            //if dc is null return zero otherwise get dc #getLong("count")
+            // +1 because the player is not included in the count
+            return dc == null ? 0L : dc.getInteger("count").longValue() + 1L;
+        });
+    }
+
+    public CompletableFuture<List<String>> getTopPlayers(int limit) {
+        return CompletableFuture.supplyAsync(() -> {
+            Bson sort = new Document("$sort", new Document("ratio", -1));
+            Bson limitation = new Document("$limit", limit);
+
+            //Optimize this
+            List<Document> documents = this.playerDB.aggregate(Arrays.asList(ranking, sort, limitation)).into(new ArrayList<>());
+            List<String> stats = new LinkedList<>();
+            documents.forEach(dc -> stats.add(dc.getString("lastName")));
+            return stats;
+        });
+    }
+
+    public CompletableFuture<Long> getPlayers() {
+        return CompletableFuture.supplyAsync(this.playerDB::estimatedDocumentCount);
+    }
+
+    public CompletableFuture<Long> playedGames() {
+        return CompletableFuture.supplyAsync(this.arenaDB::estimatedDocumentCount);
+    }
+
+    @Blocking
     private void saveUser(UUID player, PlayerStatistics stats) {
         Bson filter = playerFilter(player);
 
@@ -167,19 +232,6 @@ public class StatisticDB {
     public CompletableFuture<Boolean> arenaExists(String gameID) {
         return CompletableFuture.supplyAsync(() -> this.arenaDB.countDocuments(arenaFilter(gameID)))
                 .thenApply(count -> count != 0);
-    }
-
-
-    public Bson playerFilter(UUID uuid) {
-        return eq("playerID", uuid.toString());
-    }
-
-    public Bson playerFilter(String name) {
-        return eq("lastName", name);
-    }
-
-    public Bson arenaFilter(String uid) {
-        return eq("sessionID", uid);
     }
 
 }

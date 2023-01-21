@@ -1,16 +1,17 @@
 package me.alex.minesumo.messages;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.entity.Player;
-import net.minestom.server.entity.PlayerSkin;
+import org.jetbrains.annotations.Blocking;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.net.URL;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.format.TextColor.color;
@@ -18,7 +19,7 @@ import static net.kyori.adventure.text.format.TextColor.color;
 public class HeadChat {
 
 
-    public static final TextColor[][] defaultHead = new TextColor[][]{
+    private static final TextColor[][] defaultHead = new TextColor[][]{
             {color(25, 25, 25), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(25, 25, 25)},
             {color(25, 25, 25), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(25, 25, 25)},
             {color(25, 25, 25), color(25, 25, 25), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(12, 12, 12), color(25, 25, 25), color(25, 25, 25)},
@@ -31,47 +32,41 @@ public class HeadChat {
             {color(255, 215, 176), color(255, 215, 176), color(255, 215, 176), color(255, 215, 176), color(255, 215, 176), color(255, 215, 176), color(255, 215, 176), color(255, 215, 176)},
     };
 
-    public static final HashMap<UUID, TextColor[][]> headCache = new HashMap<>();
+    private static final Cache<UUID, TextColor[][]> headCache = Caffeine.newBuilder()
+            .softValues()
+            .expireAfterWrite(15, TimeUnit.MINUTES)
+            .build();
 
+    @Blocking
     public static Component getHead(Player uid) {
 
-        TextColor[][] head = headCache.computeIfAbsent(uid.getUuid(), uuid -> {
-            PlayerSkin playerSkin = PlayerSkin.fromUsername(uid.getUsername());
-            PlayerSkin skin = uid.getSkin();
+        //TODO: Scoreboard heads per player per team
 
-            if (playerSkin == null) {
-                System.out.println("no");
-                return defaultHead;
-            }
-
-            String json = new String(Base64.getDecoder().decode(playerSkin.textures()));
-            String textureUrl = json.split("\"SKIN\"")[1].split("\"")[3];
-
-            BufferedImage image;
+        TextColor[][] head = headCache.getIfPresent(uid.getUuid());
+        //Optimize the image downloading
+        if (head == null) {
             try {
-                image = ImageIO.read(new URL(textureUrl));
-            } catch (Exception e) {
-                System.out.println("Failed to get image.");
-                e.printStackTrace();
-                return defaultHead;
-            }
-
-            TextColor[][] playerHead = new TextColor[8][8];
-            for (int x = 8; x < 16; x++) {
-                for (int y = 8; y < 16; y++) {
-                    int rgb = image.getRGB(x, y);
-                    playerHead[y - 8][x - 8] = color(rgb);
+                BufferedImage image = ImageIO.read(new URL("https://minotar.net/helm/" + uid.getUsername() + "/8.png"));
+                head = new TextColor[image.getWidth()][image.getHeight()];
+                for (int x = 0; x < image.getWidth(); x++) {
+                    for (int y = 0; y < image.getHeight(); y++) {
+                        int rgb = image.getRGB(x, y);
+                        head[x][y] = color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+                    }
                 }
+                headCache.put(uid.getUuid(), head);
+            } catch (Exception e) {
+                e.printStackTrace();
+                head = defaultHead;
             }
-
-            return playerHead;
-        });
+        }
 
         Component component = Component.empty();
-        for (int y = 0; y < 8; y++) {
-            for (int x = 0; x < 8; x++) {
+        //Rotate the head clockwise
+        for (int y = 0; y < head.length; y++) {
+            for (int x = 0; x < head.length; x++) {
                 component = component
-                        .append(text((char) (((int) '\uF810') + y)).color(head[y][x]))
+                        .append(text((char) (((int) '\uF810') + y)).color(head[x][y]))
                         .append(text('\uE001'));
             }
             component = component.append(text('\uE008'));

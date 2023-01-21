@@ -41,7 +41,7 @@ public class ArenaGameIDGenerator {
                 rndm = getRandomArenaUID();
             } while (this.dbStatsHandler
                     .getArenaDB()
-                    .countDocuments(this.dbStatsHandler.arenaFilter(rndm)) != 0);
+                    .countDocuments(StatisticDB.arenaFilter(rndm)) != 0);
 
             return rndm;
         });
