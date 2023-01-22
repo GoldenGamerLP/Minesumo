@@ -12,7 +12,6 @@ import lombok.Getter;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.statistics.ArenaStatistics;
 import me.alex.minesumo.data.statistics.PlayerStatistics;
-import me.alex.minesumo.utils.JsonConfigurationLoader;
 import me.alex.minesumo.utils.MojangUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -28,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import static com.mongodb.client.model.Filters.eq;
 
 public class StatisticDB {
-    private static final Gson gson = JsonConfigurationLoader.getGson();
+    private static final Gson gson = new Gson();
 
     private static final String
             arenaDBName = "arena-stats",

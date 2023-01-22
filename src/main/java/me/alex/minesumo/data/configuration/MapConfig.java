@@ -1,45 +1,33 @@
 package me.alex.minesumo.data.configuration;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.gson.annotations.Expose;
-import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 import net.hollowcube.util.schem.Schematic;
 import net.minestom.server.coordinate.Pos;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class MapConfig {
+public class MapConfig implements Serializable {
 
-    @Expose(deserialize = false, serialize = false)
-    private Schematic mapSchematic = null;
+    @JsonIgnore
+    @Expose(serialize = false, deserialize = false)
+    transient Schematic mapSchematic = null;
 
-    @SerializedName("mapName")
-    @Expose
-    private String mapName = "MyMap";
+    String mapName = "MyMap";
 
-    @SerializedName("schematicFile")
-    @Expose
-    private String schematicFile = "default.schematic";
+    String schematicFile = "default.schematic";
 
-    @SerializedName("playerPerSpawnPosition")
-    @Expose
-    private Integer playerPerSpawnPosition = 1;
+    Integer playerPerSpawnPosition = 1;
 
-    @SerializedName("spawnPositions")
-    @Expose
-    private List<Pos> spawnPositions = new ArrayList<>();
+    List<Pos> spawnPositions = new ArrayList<>();
 
-    @SerializedName("deathLevel")
-    @Expose
-    private Double deathLevel = 0.0D;
+    Double deathLevel = 0.0D;
 
-    @SerializedName("startingLives")
-    @Expose
-    private Integer startingLives = 0;
+    Integer startingLives = 0;
 
-    @SerializedName("spectatorPosition")
-    @Expose
-    private Pos spectatorPosition = Pos.ZERO;
+    Pos spectatorPosition = Pos.ZERO;
 }

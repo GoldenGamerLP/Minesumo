@@ -114,6 +114,10 @@ public class GlobalEventListener {
 
             instance.sendMessage(component);
 
+
+            //Remove PVP Tag
+            event.getPlayer().removeTag(PvPEvents.LAST_HIT);
+
             //Stats
             UUID deathID = event.getAttacker() == null ? null : event.getAttacker().getUuid();
             statsMng.addDeath(instance.getGameID(), event.getPlayer().getUuid(), deathID);

@@ -4,7 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.commands.*;
 import me.alex.minesumo.data.configuration.MinesumoMainConfig;
 import me.alex.minesumo.data.configuration.MinesumoMapConfig;
+import me.alex.minesumo.data.configuration.converter.PosAdapter;
 import me.alex.minesumo.data.configuration.converter.PosConverter;
+import me.alex.minesumo.data.configuration.converter.PosDeserializer;
+import me.alex.minesumo.data.configuration.converter.PosSerializer;
 import me.alex.minesumo.data.database.ArenaGameIDGenerator;
 import me.alex.minesumo.data.database.MongoDB;
 import me.alex.minesumo.data.database.StatisticDB;
@@ -15,10 +18,12 @@ import me.alex.minesumo.map.MapCreator;
 import me.alex.minesumo.map.MapSelection;
 import me.alex.minesumo.map.SchematicHandler;
 import me.alex.minesumo.messages.MinesumoMessages;
-import me.alex.minesumo.utils.JsonConfigurationLoader;
+import me.alex.minesumo.utils.json.JsonMapper;
+import me.alex.minesumo.utils.json.configurations.JsonConfigurationLoader;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.extensions.Extension;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -36,8 +41,20 @@ public class Minesumo extends Extension {
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
 
+    private long startMS;
+
     @Override
     public void preInitialize() {
+        startMS = System.currentTimeMillis();
+        JsonMapper.init(JsonMapper.JsonProviders.MOSHI);
+
+        JsonMapper.JSON_PROVIDER.addSerializer(Pos.class, List.of(
+                new PosConverter(),
+                new PosSerializer(),
+                new PosAdapter(),
+                new PosDeserializer())
+        );
+
         //For Config Uses
         this.mainCFG = new JsonConfigurationLoader<>(
                 this.getDataDirectory().resolve("configuration.json").toFile(),
@@ -49,7 +66,6 @@ public class Minesumo extends Extension {
                 MinesumoMapConfig.class
         );
 
-        JsonConfigurationLoader.registerConverter(Pos.class, new PosConverter());
         MinesumoMessages.innit();
     }
 
@@ -89,6 +105,7 @@ public class Minesumo extends Extension {
         new StatsCMD(this);
 
         log.info("Minesumo has been initialized!");
+        log.info("Took {}ms", System.currentTimeMillis() - startMS);
         hasStarted.set(true);
     }
 

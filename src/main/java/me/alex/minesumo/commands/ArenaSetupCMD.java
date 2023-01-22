@@ -51,6 +51,8 @@ public class ArenaSetupCMD extends Command {
 
         var save = ArgumentType.Literal("SAVE");
 
+        //TODO: organize this mess and optimize the code + messages
+
         nameArgument.setSuggestionCallback((sender, context, suggestion) -> {
             try (Stream<Path> paths = Files.walk(minesumo.getSchematicLoader().getSchematicFolder())) {
                 paths.filter(Files::isRegularFile).forEach(path -> {
@@ -60,6 +62,11 @@ public class ArenaSetupCMD extends Command {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        });
+
+        setDefaultExecutor((sender, context) -> {
+            sender.sendMessage("Use: /setup join <arena>");
+            sender.sendMessage("Use: /setup set <spawn|spectator|deathHeight> <spawnID, deathHeight>");
         });
 
         addSyntax((sender, context) -> {
@@ -143,7 +150,7 @@ public class ArenaSetupCMD extends Command {
             }
 
             mapConfig.setDeathLevel(Double.valueOf(yLevel));
-            player.sendMessage("Set spec spawn!");
+            player.sendMessage("Set death spawn!");
         }, deathHeight, set, spawnID);
 
         addSyntax(this::addSpawn, spawn, add);
@@ -159,7 +166,7 @@ public class ArenaSetupCMD extends Command {
 
             MapConfig config = this.activeMaps.remove(player.getUuid()).getConfig();
             minesumo.getMapConfig().getConfigurations().add(config);
-            player.sendMessage("Please restart to ensure using the config correctly. \n You can settup another arena.");
+            player.sendMessage("Please restart to ensure using the config correctly. \n You can setup another arena.");
             MinecraftServer.stopCleanly();
         }, save);
 
@@ -170,7 +177,7 @@ public class ArenaSetupCMD extends Command {
         Player player = (Player) sender;
 
         if (!this.activeMaps.containsKey(player.getUuid())) {
-            player.sendMessage("You are not setupping.");
+            player.sendMessage("You are not setuping.");
             return;
         }
 

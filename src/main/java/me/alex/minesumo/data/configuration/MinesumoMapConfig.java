@@ -1,14 +1,13 @@
 package me.alex.minesumo.data.configuration;
 
-import com.google.gson.annotations.Expose;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 @Data
-public class MinesumoMapConfig {
+public class MinesumoMapConfig implements Serializable {
 
-    @Expose
-    private Set<MapConfig> configurations = new HashSet<>();
+    Set<MapConfig> configurations = new HashSet<>();
 }

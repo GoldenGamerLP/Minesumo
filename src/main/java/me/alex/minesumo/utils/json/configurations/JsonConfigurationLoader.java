@@ -1,10 +1,10 @@
-package me.alex.minesumo.utils;
+package me.alex.minesumo.utils.json.configurations;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import lombok.extern.slf4j.Slf4j;
+import me.alex.minesumo.utils.json.JsonMapper;
+import me.alex.minesumo.utils.json.JsonProvider;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,20 +25,10 @@ import java.nio.charset.StandardCharsets;
  */
 @Slf4j(topic = "Configuration-Loader")
 public final class JsonConfigurationLoader<T> {
-
-    private static Gson gson;
+    private static final JsonProvider jsonProvider;
 
     static {
-        gson = new GsonBuilder()
-                .setPrettyPrinting()
-                .disableHtmlEscaping()
-                .excludeFieldsWithoutExposeAnnotation()
-                .enableComplexMapKeySerialization()
-                .setLenient()
-                .serializeNulls()
-                .create();
-
-
+        jsonProvider = JsonMapper.JSON_PROVIDER;
     }
 
     private final Class<T> of;
@@ -54,14 +44,6 @@ public final class JsonConfigurationLoader<T> {
     public JsonConfigurationLoader(@NotNull File file, @NotNull Class<T> of) {
         this.of = of;
         this.file = file;
-    }
-
-    public static void registerConverter(Class<?> clazz, Object obj) {
-        gson = gson.newBuilder().registerTypeHierarchyAdapter(clazz, obj).create();
-    }
-
-    public static Gson getGson() {
-        return gson;
     }
 
     public JsonConfigurationLoader<T> load() {
@@ -100,7 +82,7 @@ public final class JsonConfigurationLoader<T> {
     @ApiStatus.Internal
     private void writeToFile() {
         try (BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(file, StandardCharsets.UTF_8, false))) {
-            gson.toJson(gsonObject, bufferedWriter);
+            jsonProvider.toJson(of, gsonObject, bufferedWriter);
         } catch (IOException e) {
             log.warn("Failed to save [{}] File with error: {}", this.file, e);
         }
@@ -109,7 +91,7 @@ public final class JsonConfigurationLoader<T> {
     @ApiStatus.Internal
     private void readFromFile() {
         try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
-            gsonObject = gson.fromJson(bufferedReader, of);
+            gsonObject = jsonProvider.fromJson(bufferedReader, of);
         } catch (IOException e) {
             log.warn("Failed to save [{}] File with error: {}", this.file, e);
         }

@@ -1,6 +1,5 @@
 package me.alex.minesumo.map;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.configuration.MapConfig;
@@ -28,7 +27,6 @@ public class SchematicHandler {
 
     private final Minesumo minesumo;
 
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_BAD_PRACTICE")
     public SchematicHandler(Minesumo minesumo) {
         this.config = minesumo.getMapConfig();
         this.loadedMapConfigs = new CopyOnWriteArrayList<>();
@@ -83,6 +81,10 @@ public class SchematicHandler {
     @SuppressWarnings("unchecked")
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
+        if (this.config == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+
         Set<MapConfig> currentConfigs = config.getConfigurations();
         log.info("Found {} maps!", currentConfigs.size());
         currentConfigs.removeIf(this.mapValidator);
