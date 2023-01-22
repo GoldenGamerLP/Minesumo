@@ -1,27 +1,24 @@
-package me.alex.minesumo.data.statistics;
+package me.alex.minesumo.data.enities;
 
-import com.google.gson.annotations.Expose;
+import dev.morphia.annotations.*;
 import lombok.Data;
 import me.alex.minesumo.events.ArenaEndEvent;
 
 import java.util.*;
 
 @Data
+@Entity("arena_statistics")
+@Indexes(@Index(fields = @Field(value = "sessionID")))
 public final class ArenaStatistics {
 
-    @Expose
-    private final String sessionID;
+    @Id
+    String sessionID;
 
-    @Expose
-    private final List<UUID> participants;
-    @Expose
-    private final List<KillAndDeathHistory> killsAndDeathHistory;
-    @Expose
-    private final List<UUID> winners;
-    @Expose
-    private Date start, stop;
-    @Expose
-    private ArenaEndEvent.EndState endState;
+    List<UUID> participants;
+    List<KillAndDeathHistory> killsAndDeathHistory;
+    List<UUID> winners;
+    Date start, stop;
+    ArenaEndEvent.EndState endState;
 
     public ArenaStatistics(String uid) {
         this.sessionID = uid;
@@ -33,14 +30,9 @@ public final class ArenaStatistics {
 
     @Data
     public static class KillAndDeathHistory {
-        @Expose
-        private final UUID dead;
-
-        @Expose
-        private final UUID attacker;
-
-        @Expose
-        private final Date time;
+        final UUID dead;
+        final UUID attacker;
+        final Date time;
 
         public KillAndDeathHistory(UUID player, UUID attacker, Date from) {
             this.dead = player;

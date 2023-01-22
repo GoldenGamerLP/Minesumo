@@ -14,9 +14,6 @@ import org.bson.Document;
 import org.bson.UuidRepresentation;
 import org.jetbrains.annotations.Blocking;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 @Slf4j
 public class MongoDB {
 
@@ -36,21 +33,12 @@ public class MongoDB {
 
         this.mongoClient = MongoClients.create(settings);
 
-        disableLogging();
-
         if (isConnected()) {
             log.info("Connected to mongodb!");
         } else {
             log.error("Could not connect to mongodb!");
             throw new IllegalStateException("Could not connect to mongodb!");
         }
-    }
-
-    void disableLogging() {
-        //Disable logging of "org.mongodb.driver" package
-        Logger mongoLogger = Logger.getLogger(mongoClient.getClass().getPackage().getName());
-        mongoLogger.setLevel(Level.WARNING);
-        mongoLogger.setUseParentHandlers(false);
     }
 
     public void close() {

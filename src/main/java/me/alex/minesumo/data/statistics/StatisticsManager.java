@@ -2,6 +2,7 @@ package me.alex.minesumo.data.statistics;
 
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.database.StatisticDB;
+import me.alex.minesumo.data.enities.ArenaStatistics;
 import me.alex.minesumo.events.ArenaEndEvent;
 import net.minestom.server.entity.Player;
 import org.jetbrains.annotations.Nullable;

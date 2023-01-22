@@ -8,10 +8,19 @@ import com.google.gson.Gson;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import dev.morphia.Datastore;
+import dev.morphia.Morphia;
+import dev.morphia.aggregation.experimental.expressions.Expressions;
+import dev.morphia.aggregation.experimental.expressions.MathExpressions;
+import dev.morphia.aggregation.experimental.stages.Projection;
+import dev.morphia.aggregation.experimental.stages.Sort;
+import dev.morphia.query.MorphiaCursor;
+import dev.morphia.query.experimental.filters.Filter;
+import dev.morphia.query.experimental.filters.Filters;
 import lombok.Getter;
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.statistics.ArenaStatistics;
-import me.alex.minesumo.data.statistics.PlayerStatistics;
+import me.alex.minesumo.data.enities.ArenaStatistics;
+import me.alex.minesumo.data.enities.PlayerStatistics;
 import me.alex.minesumo.utils.MojangUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -23,8 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-
-import static com.mongodb.client.model.Filters.eq;
 
 public class StatisticDB {
     private static final Gson gson = new Gson();
@@ -54,6 +61,8 @@ public class StatisticDB {
     @Getter
     private final MongoCollection<Document> playerDB;
     @Getter
+    private final Datastore mongoDBStorage;
+    @Getter
     private final AsyncLoadingCache<UUID, PlayerStatistics> playerCache;
     @Getter
     private final AsyncLoadingCache<String, ArenaStatistics> arenaCache;
@@ -62,6 +71,8 @@ public class StatisticDB {
         MongoClient mongoDB = minesumo.getMongoDB().getMongoClient();
 
         MongoDatabase db = mongoDB.getDatabase("minesumo");
+
+        this.mongoDBStorage = Morphia.createDatastore(mongoDB, "minesumo");
 
         this.arenaDB = db.getCollection(arenaDBName);
         this.playerDB = db.getCollection(playerDBName);
@@ -84,29 +95,33 @@ public class StatisticDB {
                 .buildAsync(loadingPL);
     }
 
-    public static Bson playerFilter(UUID uuid) {
-        return eq("playerID", uuid.toString());
+    public static Filter playerFilter(UUID uuid) {
+        return Filters.eq("playerID", uuid);
     }
 
-    public static Bson playerFilter(String name) {
-        return eq("lastName", name);
+    public static Filter playerFilter(String name) {
+        return Filters.eq("lastName", name);
     }
 
-    public static Bson arenaFilter(String uid) {
-        return eq("sessionID", uid);
+    public static Filter arenaFilter(String uid) {
+        return Filters.eq("gameID", uid);
     }
 
     @NotNull
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(UUID uuid) {
-        Bson filter = playerFilter(uuid);
+        Filter filter = playerFilter(uuid);
 
-        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) {
-                //Used to get last known name (important because of rate-limiting)
-                String name = MojangUtils.fromUuid(uuid.toString()).get("name").getAsString();
-                return new PlayerStatistics(uuid, name);
-            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerStatistics stats = mongoDBStorage.find(PlayerStatistics.class)
+                    .filter(filter)
+                    .first();
+
+            if (stats == null) {
+                String lastName = MojangUtils.fromUuid(uuid.toString()).get("name").getAsString();
+                stats = new PlayerStatistics(uuid, lastName);
+            }
+
+            return stats;
         });
     }
 
@@ -118,13 +133,14 @@ public class StatisticDB {
      */
     @NotNull
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
-        Bson filter = playerFilter(name);
+        Filter filter = playerFilter(name);
 
-        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) {
-                return null;
-            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerStatistics stats = mongoDBStorage.find(PlayerStatistics.class)
+                    .filter(filter)
+                    .first();
+
+            return stats;
         });
     }
 
@@ -134,12 +150,7 @@ public class StatisticDB {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         Map<UUID, PlayerStatistics> map = new ConcurrentHashMap<>();
 
-        players.forEach(uuid ->
-                futures.add(CompletableFuture.runAsync(() -> {
-                    Document dc = this.playerDB.find(playerFilter(uuid)).first();
-                    if (dc == null) map.put(uuid, null);
-                    else map.put(uuid, gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class));
-                })));
+        players.forEach(uuid -> futures.add(playerCache.get(uuid).thenAccept(stats -> map.put(uuid, stats))));
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> future.complete(map));
         return future;
@@ -151,15 +162,16 @@ public class StatisticDB {
             if (stats == null) return 0L;
             double kd = (stats.getKills() == 0 ? 1 : stats.getKills()) / (stats.getDeaths() == 0 ? 1D : stats.getDeaths());
 
-            Bson sum = new Document("$group", new Document()
-                    .append("_id", null)
-                    .append("count", new Document("$sum", new Document("$cond", Arrays.asList(
-                                    new Document("$lt", Arrays.asList("$ratio", kd)),
-                                    1,
-                                    0
-                            )))
-                    ));
-            Document dc = this.playerDB.aggregate(Arrays.asList(ranking, sum)).first();
+            MorphiaCursor<Document> query = mongoDBStorage.aggregate(PlayerStatistics.class)
+                    .match(Filters.and(Filters.gt("kills", 0), Filters.gt("deaths", 0)))
+                    .project(Projection.project().include("ratio", MathExpressions.divide(Expressions.field("kills"), Expressions.field("deaths"))))
+                    .sort(Sort.sort().descending("ratio"))
+                    .match(Filters.gte("ratio", kd))
+                    .count("count")
+                    .execute(Document.class);
+
+            Document dc = query.tryNext();
+            query.close();
             //if dc is null return zero otherwise get dc #getLong("count")
             // +1 because the player is not included in the count
             return dc == null ? 0L : dc.getInteger("count").longValue() + 1L;
@@ -189,48 +201,62 @@ public class StatisticDB {
 
     @Blocking
     private void saveUser(UUID player, PlayerStatistics stats) {
-        Bson filter = playerFilter(player);
-
-        CompletableFuture.supplyAsync(() -> this.playerDB.countDocuments(filter)).thenAccept(docs -> {
-            Document json = Document.parse(gson.toJson(stats));
-            if (docs == 0)
-                this.playerDB.insertOne(json);
-            else this.playerDB.replaceOne(filter, json);
-        }).join();
+        this.mongoDBStorage.save(stats);
     }
 
     private void saveArena(String gameID, ArenaStatistics stats) {
-        CompletableFuture.runAsync(() -> this.arenaDB.insertOne(Document.parse(gson.toJson(stats)))).join();
+        this.mongoDBStorage.save(stats);
     }
 
     @NotNull
     public CompletableFuture<ArenaStatistics> getOrCreateArenaStatistics(String gameID) {
-        Bson filter = arenaFilter(gameID);
+        Filter filter = arenaFilter(gameID);
 
-        return CompletableFuture.supplyAsync(() -> this.arenaDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) return new ArenaStatistics(gameID);
-            else return gson.fromJson(dc.toJson(), ArenaStatistics.class);
+        return CompletableFuture.supplyAsync(() -> {
+            ArenaStatistics stats = mongoDBStorage.find(ArenaStatistics.class)
+                    .filter(filter)
+                    .first();
+
+            if (stats == null) {
+                stats = new ArenaStatistics(gameID);
+            }
+
+            return stats;
         });
     }
 
     @NotNull
     public CompletableFuture<Boolean> playerExists(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> this.playerDB.countDocuments(playerFilter(uuid)))
-                .thenApply(count -> count != 0);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerStatistics stats = mongoDBStorage.find(PlayerStatistics.class)
+                    .filter(playerFilter(uuid))
+                    .first();
+
+            return stats != null;
+        });
     }
 
     @NotNull
     public CompletableFuture<Boolean> playerExists(String name) {
-        return CompletableFuture.supplyAsync(() -> this.playerDB.countDocuments(playerFilter(name)))
-                .thenApply(count -> count != 0);
+        return CompletableFuture.supplyAsync(() -> {
+            PlayerStatistics stats = mongoDBStorage.find(PlayerStatistics.class)
+                    .filter(playerFilter(name))
+                    .first();
+
+            return stats != null;
+        });
     }
 
     //Check if an arena exists
     @NotNull
     public CompletableFuture<Boolean> arenaExists(String gameID) {
-        return CompletableFuture.supplyAsync(() -> this.arenaDB.countDocuments(arenaFilter(gameID)))
-                .thenApply(count -> count != 0);
+        return CompletableFuture.supplyAsync(() -> {
+            ArenaStatistics stats = mongoDBStorage.find(ArenaStatistics.class)
+                    .filter(arenaFilter(gameID))
+                    .first();
+
+            return stats != null;
+        });
     }
 
 }

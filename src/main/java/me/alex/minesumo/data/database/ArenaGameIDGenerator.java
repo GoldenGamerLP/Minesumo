@@ -1,6 +1,8 @@
 package me.alex.minesumo.data.database;
 
+import dev.morphia.query.experimental.filters.Filters;
 import me.alex.minesumo.Minesumo;
+import me.alex.minesumo.data.enities.ArenaStatistics;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -40,8 +42,8 @@ public class ArenaGameIDGenerator {
             do {
                 rndm = getRandomArenaUID();
             } while (this.dbStatsHandler
-                    .getArenaDB()
-                    .countDocuments(StatisticDB.arenaFilter(rndm)) != 0);
+                    .getMongoDBStorage()
+                    .find(ArenaStatistics.class).filter(StatisticDB.arenaFilter(rndm)).count() != 0);
 
             return rndm;
         });

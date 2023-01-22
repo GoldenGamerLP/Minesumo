@@ -46,7 +46,7 @@ public class Minesumo extends Extension {
     @Override
     public void preInitialize() {
         startMS = System.currentTimeMillis();
-        JsonMapper.init(JsonMapper.JsonProviders.MOSHI);
+        JsonMapper.init(JsonMapper.JsonProviders.GSON);
 
         JsonMapper.JSON_PROVIDER.addSerializer(Pos.class, List.of(
                 new PosConverter(),

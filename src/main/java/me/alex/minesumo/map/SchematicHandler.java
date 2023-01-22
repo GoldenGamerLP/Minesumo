@@ -81,9 +81,6 @@ public class SchematicHandler {
     @SuppressWarnings("unchecked")
     public CompletableFuture<Void> loadSchematics() {
         //Sort out wrong configs
-        if (this.config == null) {
-            return CompletableFuture.completedFuture(null);
-        }
 
         Set<MapConfig> currentConfigs = config.getConfigurations();
         log.info("Found {} maps!", currentConfigs.size());
