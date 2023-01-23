@@ -26,12 +26,6 @@ public class GsonProviderImpl implements JsonProvider {
     }
 
     @Override
-    public <T> T fromJson(String json, Class<T> clazz) {
-        return gson.fromJson(json, clazz);
-    }
-
-
-    @Override
     public <T> void toJson(Class<T> clazz, T object, OutputStream outputStream) {
         try (OutputStreamWriter writer = new OutputStreamWriter(outputStream)) {
             gson.toJson(object, writer);
@@ -39,6 +33,11 @@ public class GsonProviderImpl implements JsonProvider {
             log.error("Error while converting to json", e);
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public <T> void toJson(Class<T> clazz, T object, Writer writer) {
+        gson.toJson(object, writer);
     }
 
     @Override
@@ -52,13 +51,13 @@ public class GsonProviderImpl implements JsonProvider {
     }
 
     @Override
-    public <T> void toJson(Class<T> clazz, T object, Writer writer) {
-        gson.toJson(object, writer);
+    public <T> T fromJson(Reader reader, Class<T> clazz) {
+        return gson.fromJson(reader, clazz);
     }
 
     @Override
-    public <T> T fromJson(Reader reader, Class<T> clazz) {
-        return gson.fromJson(reader, clazz);
+    public <T> T fromJson(String json, Class<T> clazz) {
+        return gson.fromJson(json, clazz);
     }
 
     @Override

@@ -38,16 +38,6 @@ public class JacksonProviderImpl implements JsonProvider {
     }
 
     @Override
-    public <T> T fromJson(String json, Class<T> clazz) {
-        try {
-            return mapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
-            log.error("Error while converting to json", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
     public <T> void toJson(Class<T> clazz, T object, OutputStream outputStream) {
         try {
             mapper.writeValue(outputStream, object);
@@ -58,20 +48,30 @@ public class JacksonProviderImpl implements JsonProvider {
     }
 
     @Override
-    public <T> T fromJson(InputStream inputStream, Class<T> clazz) {
+    public <T> void toJson(Class<T> clazz, T object, Writer outputStream) {
         try {
-            return mapper.readValue(inputStream, clazz);
-        } catch (IOException e) {
+            mapper.writeValue(outputStream, object);
+        } catch (Exception e) {
             log.error("Error while converting to json", e);
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public <T> void toJson(Class<T> clazz, T object, Writer outputStream) {
+    public <T> T fromJson(String json, Class<T> clazz) {
         try {
-            mapper.writeValue(outputStream, object);
-        } catch (Exception e) {
+            return mapper.readValue(json, clazz);
+        } catch (JsonProcessingException e) {
+            log.error("Error while converting to json", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public <T> T fromJson(InputStream inputStream, Class<T> clazz) {
+        try {
+            return mapper.readValue(inputStream, clazz);
+        } catch (IOException e) {
             log.error("Error while converting to json", e);
             throw new RuntimeException(e);
         }

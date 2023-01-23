@@ -20,23 +20,20 @@ public class MoshiProviderImpl implements me.alex.minesumo.utils.json.JsonProvid
     }
 
     @Override
-    public <T> T fromJson(String json, Class<T> clazz) {
-        try {
-            return moshi.adapter(clazz)
-                    .lenient()
-                    .indent("   ")
-                    .fromJson(json);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    @Override
     public <T> void toJson(Class<T> clazz, T object, OutputStream outputStream) {
         try {
             outputStream.write(toJson(clazz, object).getBytes());
         } catch (java.io.IOException e) {
             throw new java.lang.RuntimeException(e);
+        }
+    }
+
+    @Override
+    public <T> void toJson(Class<T> clazz, T object, Writer writer) {
+        try {
+            writer.write(toJson(clazz, object));
+        } catch (java.io.IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -50,10 +47,13 @@ public class MoshiProviderImpl implements me.alex.minesumo.utils.json.JsonProvid
     }
 
     @Override
-    public <T> void toJson(Class<T> clazz, T object, Writer writer) {
+    public <T> T fromJson(String json, Class<T> clazz) {
         try {
-            writer.write(toJson(clazz, object));
-        } catch (java.io.IOException e) {
+            return moshi.adapter(clazz)
+                    .lenient()
+                    .indent("   ")
+                    .fromJson(json);
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
