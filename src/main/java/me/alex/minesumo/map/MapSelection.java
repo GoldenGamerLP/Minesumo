@@ -1,7 +1,7 @@
 package me.alex.minesumo.map;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
 import me.alex.minesumo.instances.ArenaImpl;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;

@@ -17,18 +17,19 @@ public class JsonMapper {
     }
 
     public enum JsonProviders {
-        JACKSON(new JacksonProviderImpl()),
-        MOSHI(new MoshiProviderImpl()),
-        GSON(new GsonProviderImpl());
+        JACKSON,
+        MOSHI,
+        GSON;
 
-        private final JsonProvider provider;
-
-        JsonProviders(JsonProvider provider) {
-            this.provider = provider;
+        JsonProviders() {
         }
 
         public JsonProvider getProvider() {
-            return provider;
+            return switch (this) {
+                case JACKSON -> new JacksonProviderImpl();
+                case MOSHI -> new MoshiProviderImpl();
+                case GSON -> new GsonProviderImpl();
+            };
         }
     }
 }

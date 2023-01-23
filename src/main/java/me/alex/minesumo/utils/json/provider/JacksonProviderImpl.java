@@ -1,5 +1,6 @@
 package me.alex.minesumo.utils.json.provider;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -16,6 +17,15 @@ import java.util.List;
 public class JacksonProviderImpl implements JsonProvider {
 
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+
+    public JacksonProviderImpl() {
+        mapper.setVisibility(
+                mapper.getSerializationConfig()
+                        .getDefaultVisibilityChecker()
+                        .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                        .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+        );
+    }
 
     @Override
     public <T> String toJson(Class<T> clazz, T object) {

@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.configuration.converter;
+package me.alex.minesumo.data.converter;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -7,9 +7,9 @@ import net.minestom.server.coordinate.Pos;
 
 import java.io.IOException;
 
-public class PosSerializer extends StdSerializer<Pos> {
+public class JacksonPosSerializer extends StdSerializer<Pos> {
 
-    public PosSerializer() {
+    public JacksonPosSerializer() {
         super(Pos.class);
     }
 

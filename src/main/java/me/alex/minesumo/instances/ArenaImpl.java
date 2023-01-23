@@ -3,7 +3,7 @@ package me.alex.minesumo.instances;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import lombok.extern.slf4j.Slf4j;
-import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
 import me.alex.minesumo.events.*;
 import me.alex.minesumo.listener.PvPEvents;
 import me.alex.minesumo.tasks.*;

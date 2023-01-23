@@ -2,6 +2,8 @@ package me.alex.minesumo.data.statistics;
 
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.database.StatisticDB;
+import me.alex.minesumo.data.entities.ArenaStatistics;
+import me.alex.minesumo.data.entities.PlayerStatistics;
 import me.alex.minesumo.events.ArenaEndEvent;
 import me.alex.minesumo.messages.Messages;
 import me.alex.minesumo.utils.ListUtils;

@@ -2,8 +2,8 @@ package me.alex.minesumo.map;
 
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.configuration.MapConfig;
-import me.alex.minesumo.data.configuration.MinesumoMapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
+import me.alex.minesumo.data.entities.MinesumoMapConfig;
 import me.alex.minesumo.instances.MinesumoInstance;
 import me.alex.minesumo.utils.SchematicUtils;
 import net.hollowcube.util.schem.Schematic;

@@ -10,19 +10,22 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import lombok.Getter;
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.statistics.ArenaStatistics;
-import me.alex.minesumo.data.statistics.PlayerStatistics;
+import me.alex.minesumo.data.entities.ArenaStatistics;
+import me.alex.minesumo.data.entities.PlayerStatistics;
 import me.alex.minesumo.utils.MojangUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.mongodb.client.model.Filters.eq;
 
@@ -48,7 +51,8 @@ public class StatisticDB {
                                     "$deaths"
                             ))
                     ))
-            ));
+            )
+    );
     @Getter
     private final MongoCollection<Document> arenaDB;
     @Getter
@@ -66,8 +70,8 @@ public class StatisticDB {
         this.arenaDB = db.getCollection(arenaDBName);
         this.playerDB = db.getCollection(playerDBName);
 
-        RemovalListener<String, ArenaStatistics> removeArena = (key, value, cause) -> saveArena(key, value);
         AsyncCacheLoader<String, ArenaStatistics> loadArena = (key, cause) -> getOrCreateArenaStatistics(key);
+        RemovalListener<String, ArenaStatistics> removeArena = (key, value, cause) -> saveArena(key, value);
         this.arenaCache = Caffeine.newBuilder()
                 .removalListener(removeArena)
                 .expireAfterWrite(15, TimeUnit.MINUTES)
@@ -100,32 +104,14 @@ public class StatisticDB {
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(UUID uuid) {
         Bson filter = playerFilter(uuid);
 
-        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) {
-                //Used to get last known name (important because of rate-limiting)
-                String name = MojangUtils.fromUuid(uuid.toString()).get("name").getAsString();
-                return new PlayerStatistics(uuid, name);
-            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
-        });
+        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, playerSupplier(uuid)));
     }
 
-    /**
-     * Returns the Playerstatistics for the given name. <b>Case-Sensitive!</b>
-     *
-     * @param name The name of the player
-     * @return {@link PlayerStatistics} for the given name
-     */
     @NotNull
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
         Bson filter = playerFilter(name);
 
-        return CompletableFuture.supplyAsync(() -> this.playerDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) {
-                return null;
-            } else return gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class);
-        });
+        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, () -> null));
     }
 
     @NotNull
@@ -134,15 +120,37 @@ public class StatisticDB {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         Map<UUID, PlayerStatistics> map = new ConcurrentHashMap<>();
 
-        players.forEach(uuid ->
-                futures.add(CompletableFuture.runAsync(() -> {
-                    Document dc = this.playerDB.find(playerFilter(uuid)).first();
-                    if (dc == null) map.put(uuid, null);
-                    else map.put(uuid, gson.fromJson(dc.toBsonDocument().toJson(), PlayerStatistics.class));
-                })));
+        //Optimize this to use cache if present
+        for (UUID uuid : players) {
+            CompletableFuture<Void> f = getPlayerStatistics(uuid).thenAccept(
+                    playerStatistics -> map.put(uuid, playerStatistics)
+            );
+            futures.add(f);
+        }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> future.complete(map));
         return future;
+    }
+
+    @Blocking
+    @Nullable
+    public PlayerStatistics getPlayerStats(Bson filter, @Nullable Supplier<PlayerStatistics> def) {
+        Document dc = this.playerDB.find(filter).first();
+        return getFromDocument(dc, def, PlayerStatistics.class);
+    }
+
+    @Blocking
+    @Nullable
+    public ArenaStatistics getArenaStats(Bson filter, @Nullable Supplier<ArenaStatistics> def) {
+        Document dc = this.arenaDB.find(filter).first();
+        return getFromDocument(dc, def, ArenaStatistics.class);
+    }
+
+    @NotNull
+    public CompletableFuture<ArenaStatistics> getOrCreateArenaStatistics(String gameID) {
+        Bson filter = arenaFilter(gameID);
+
+        return CompletableFuture.supplyAsync(() -> getArenaStats(filter, arenaSupplier(gameID)));
     }
 
     public CompletableFuture<Long> getPlayerRanking(UUID uuid) {
@@ -191,27 +199,15 @@ public class StatisticDB {
     private void saveUser(UUID player, PlayerStatistics stats) {
         Bson filter = playerFilter(player);
 
-        CompletableFuture.supplyAsync(() -> this.playerDB.countDocuments(filter)).thenAccept(docs -> {
-            Document json = Document.parse(gson.toJson(stats));
-            if (docs == 0)
-                this.playerDB.insertOne(json);
-            else this.playerDB.replaceOne(filter, json);
-        }).join();
+        Document json = Document.parse(gson.toJson(stats));
+        if (this.playerDB.countDocuments(filter) == 0)
+            this.playerDB.insertOne(json);
+        else this.playerDB.replaceOne(filter, json);
     }
 
+    @Blocking
     private void saveArena(String gameID, ArenaStatistics stats) {
-        CompletableFuture.runAsync(() -> this.arenaDB.insertOne(Document.parse(gson.toJson(stats)))).join();
-    }
-
-    @NotNull
-    public CompletableFuture<ArenaStatistics> getOrCreateArenaStatistics(String gameID) {
-        Bson filter = arenaFilter(gameID);
-
-        return CompletableFuture.supplyAsync(() -> this.arenaDB.find(filter)).thenApply(documents -> {
-            Document dc = documents.first();
-            if (dc == null) return new ArenaStatistics(gameID);
-            else return gson.fromJson(dc.toJson(), ArenaStatistics.class);
-        });
+        this.arenaDB.insertOne(Document.parse(gson.toJson(stats)));
     }
 
     @NotNull
@@ -226,11 +222,37 @@ public class StatisticDB {
                 .thenApply(count -> count != 0);
     }
 
-    //Check if an arena exists
     @NotNull
     public CompletableFuture<Boolean> arenaExists(String gameID) {
         return CompletableFuture.supplyAsync(() -> this.arenaDB.countDocuments(arenaFilter(gameID)))
                 .thenApply(count -> count != 0);
     }
 
+    public void editArenaStats(@NotNull String gameID, @NotNull Consumer<ArenaStatistics> stats) {
+        this.getArenaCache().get(gameID).thenAccept(stats);
+    }
+
+    public void editPlayerStats(@NotNull UUID uuid, @NotNull Consumer<PlayerStatistics> stats) {
+        this.getPlayerCache().get(uuid).thenAccept(stats);
+    }
+
+    public void editPlayerStats(@NotNull List<UUID> players, @NotNull Consumer<PlayerStatistics> stats) {
+        this.getPlayerCache().getAll(players).thenAccept(map -> map.values().forEach(stats));
+    }
+
+    private <T> T getFromDocument(Document document, @Nullable Supplier<T> def, Class<T> clazz) {
+        if (document == null) return def.get();
+        return gson.fromJson(document.toJson(), clazz);
+    }
+
+    @Blocking
+    private Supplier<PlayerStatistics> playerSupplier(UUID uuid) {
+        String name = MojangUtils.fromUuid(uuid.toString()).get("name").getAsString();
+        return () -> new PlayerStatistics(uuid, name);
+    }
+
+    @Blocking
+    private Supplier<ArenaStatistics> arenaSupplier(String gameID) {
+        return () -> new ArenaStatistics(gameID);
+    }
 }

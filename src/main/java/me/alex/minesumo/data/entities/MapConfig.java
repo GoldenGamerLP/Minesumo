@@ -1,7 +1,5 @@
-package me.alex.minesumo.data.configuration;
+package me.alex.minesumo.data.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.gson.annotations.Expose;
 import lombok.Data;
 import net.hollowcube.util.schem.Schematic;
 import net.minestom.server.coordinate.Pos;
@@ -11,10 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class MapConfig implements Serializable {
+public final class MapConfig implements Serializable {
 
-    @JsonIgnore
-    @Expose(serialize = false, deserialize = false)
     transient Schematic mapSchematic = null;
 
     String mapName = "MyMap";

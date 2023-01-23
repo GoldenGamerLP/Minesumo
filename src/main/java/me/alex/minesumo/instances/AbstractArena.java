@@ -1,7 +1,7 @@
 package me.alex.minesumo.instances;
 
 import lombok.Getter;
-import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
 import net.minestom.server.instance.SharedInstance;
 import org.jetbrains.annotations.NotNull;
 

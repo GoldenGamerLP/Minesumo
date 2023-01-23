@@ -1,11 +1,11 @@
-package me.alex.minesumo.data.configuration;
+package me.alex.minesumo.data.entities;
 
 import lombok.Data;
 
 import java.io.Serializable;
 
 @Data
-public class MinesumoMainConfig implements Serializable {
+public final class MinesumoMainConfig implements Serializable {
 
     String schematicFolder = "schematics";
 

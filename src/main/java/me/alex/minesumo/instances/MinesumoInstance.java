@@ -1,7 +1,7 @@
 package me.alex.minesumo.instances;
 
 import lombok.extern.slf4j.Slf4j;
-import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
 import me.alex.minesumo.utils.FullbrightDimension;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.instance.InstanceContainer;

@@ -2,15 +2,15 @@ package me.alex.minesumo;
 
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.commands.*;
-import me.alex.minesumo.data.configuration.MinesumoMainConfig;
-import me.alex.minesumo.data.configuration.MinesumoMapConfig;
-import me.alex.minesumo.data.configuration.converter.PosAdapter;
-import me.alex.minesumo.data.configuration.converter.PosConverter;
-import me.alex.minesumo.data.configuration.converter.PosDeserializer;
-import me.alex.minesumo.data.configuration.converter.PosSerializer;
+import me.alex.minesumo.data.converter.GsonPosConverter;
+import me.alex.minesumo.data.converter.JacksonPosDeserializer;
+import me.alex.minesumo.data.converter.JacksonPosSerializer;
+import me.alex.minesumo.data.converter.MoshiPosConverter;
 import me.alex.minesumo.data.database.ArenaGameIDGenerator;
 import me.alex.minesumo.data.database.MongoDB;
 import me.alex.minesumo.data.database.StatisticDB;
+import me.alex.minesumo.data.entities.MinesumoMainConfig;
+import me.alex.minesumo.data.entities.MinesumoMapConfig;
 import me.alex.minesumo.data.statistics.StatisticFormatter;
 import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.listener.GlobalEventListener;
@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Minesumo extends Extension {
 
     private final AtomicBoolean hasStarted = new AtomicBoolean(false);
+    private final long startTime = System.currentTimeMillis();
     private JsonConfigurationLoader<MinesumoMainConfig> mainCFG;
     private JsonConfigurationLoader<MinesumoMapConfig> mapCFG;
     private SchematicHandler schematicHandler;
@@ -41,18 +42,16 @@ public class Minesumo extends Extension {
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
 
-    private long startMS;
-
     @Override
     public void preInitialize() {
-        startMS = System.currentTimeMillis();
-        JsonMapper.init(JsonMapper.JsonProviders.MOSHI);
+        //Important: If using other json libary -> Change build.gradle to implement the libary
+        JsonMapper.init(JsonMapper.JsonProviders.GSON);
 
         JsonMapper.JSON_PROVIDER.addSerializer(Pos.class, List.of(
-                new PosConverter(),
-                new PosSerializer(),
-                new PosAdapter(),
-                new PosDeserializer())
+                new GsonPosConverter(),
+                new JacksonPosSerializer(),
+                new MoshiPosConverter(),
+                new JacksonPosDeserializer())
         );
 
         //For Config Uses
@@ -103,9 +102,10 @@ public class Minesumo extends Extension {
         new ForceStartCMD(this);
         new GameIdCMD(this);
         new StatsCMD(this);
+        new MapInfoCMD(this);
 
         log.info("Minesumo has been initialized!");
-        log.info("Took {}ms", System.currentTimeMillis() - startMS);
+        log.info("Took {}ms", System.currentTimeMillis() - startTime);
         hasStarted.set(true);
     }
 
@@ -116,10 +116,12 @@ public class Minesumo extends Extension {
 
     @Override
     public void preTerminate() {
-        this.mainCFG.save();
+        //only save configs if editor mode is enabled
+        if (getConfig().getIsInEditorMode()) {
+            this.mainCFG.save();
+            this.mapCFG.save();
+        }
         this.mainCFG = null;
-
-        this.mapCFG.save();
         this.mapCFG = null;
     }
 

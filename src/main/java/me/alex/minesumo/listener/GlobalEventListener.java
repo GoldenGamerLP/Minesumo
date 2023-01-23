@@ -1,7 +1,7 @@
 package me.alex.minesumo.listener;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.statistics.PlayerStatistics;
+import me.alex.minesumo.data.entities.PlayerStatistics;
 import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.events.ArenaChangeStateEvent;
 import me.alex.minesumo.events.ArenaEndEvent;

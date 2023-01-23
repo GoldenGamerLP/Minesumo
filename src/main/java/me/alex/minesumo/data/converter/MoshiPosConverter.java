@@ -1,4 +1,4 @@
-package me.alex.minesumo.data.configuration.converter;
+package me.alex.minesumo.data.converter;
 
 import com.squareup.moshi.FromJson;
 import com.squareup.moshi.ToJson;
@@ -6,7 +6,7 @@ import me.alex.minesumo.utils.json.Moshi;
 import net.minestom.server.coordinate.Pos;
 import org.jetbrains.annotations.Nullable;
 
-public class PosAdapter implements Moshi {
+public class MoshiPosConverter implements Moshi {
 
     @ToJson
     public String[] toJson(Pos pos) {
