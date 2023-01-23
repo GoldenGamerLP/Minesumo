@@ -1,8 +1,10 @@
 package me.alex.minesumo.commands;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.configuration.MapConfig;
+import me.alex.minesumo.data.entities.MapConfig;
 import me.alex.minesumo.instances.MinesumoInstance;
+import me.alex.minesumo.messages.Messages;
+import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
@@ -13,6 +15,7 @@ import net.minestom.server.command.builder.suggestion.SuggestionEntry;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.instance.RemoveEntityFromInstanceEvent;
+import net.minestom.server.timer.TaskSchedule;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,10 +65,14 @@ public class ArenaSetupCMD extends Command {
             }
         });
 
+        setDefaultExecutor((sender, context) -> {
+            sender.sendMessage(Messages.GAME_COMMAND_SETUP_HELP.toTranslatable());
+        });
+
         addSyntax((sender, context) -> {
             if (!(sender instanceof Player player)) return;
             if (this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage("You are already setupping.");
+                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_IN_MAP.toTranslatable());
                 return;
             }
 
@@ -99,7 +106,11 @@ public class ArenaSetupCMD extends Command {
 
                         MinecraftServer.getInstanceManager().unregisterInstance(this.activeMaps.remove(pe.getUuid()));
                     });
-                    player.sendMessage("You are now setupping.");
+
+                    player.sendMessage(Messages.GAME_COMMAND_SETUP_SETUPPING
+                            .toTranslatable(
+                                    Component.text(mapConfig.getSchematicFile())
+                            ));
                 });
             });
         }, join, nameArgument);
@@ -107,18 +118,19 @@ public class ArenaSetupCMD extends Command {
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
             if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage("You are not setupping.");
+                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
                 return;
             }
 
             this.activeMaps.get(player.getUuid()).getConfig().setSpectatorPosition(player.getPosition());
-            player.sendMessage("Set spec spawn!");
+
+            player.sendMessage("Spectator Position was set.");
         }, spectator, set);
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
             if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage("You are not setupping.");
+                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
                 return;
             }
 
@@ -143,7 +155,9 @@ public class ArenaSetupCMD extends Command {
             }
 
             mapConfig.setDeathLevel(Double.valueOf(yLevel));
-            player.sendMessage("Set spec spawn!");
+
+
+            player.sendMessage("Death Level was set.");
         }, deathHeight, set, spawnID);
 
         addSyntax(this::addSpawn, spawn, add);
@@ -153,14 +167,21 @@ public class ArenaSetupCMD extends Command {
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
             if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage("You are not setupping");
+                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
                 return;
             }
 
             MapConfig config = this.activeMaps.remove(player.getUuid()).getConfig();
             minesumo.getMapConfig().getConfigurations().add(config);
-            player.sendMessage("Please restart to ensure using the config correctly. \n You can settup another arena.");
-            MinecraftServer.stopCleanly();
+
+            player.sendMessage("Please restart to ensure using the config correctly. \n You can setup another arena.");
+
+            MinecraftServer.getSchedulerManager()
+                    .scheduleTask(
+                            MinecraftServer::stopCleanly,
+                            TaskSchedule.tick(30),
+                            TaskSchedule.stop()
+                    );
         }, save);
 
         MinecraftServer.getCommandManager().register(this);
@@ -170,7 +191,7 @@ public class ArenaSetupCMD extends Command {
         Player player = (Player) sender;
 
         if (!this.activeMaps.containsKey(player.getUuid())) {
-            player.sendMessage("You are not setupping.");
+            player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
             return;
         }
 
@@ -194,7 +215,7 @@ public class ArenaSetupCMD extends Command {
         Player player = (Player) sender;
 
         if (!this.activeMaps.containsKey(player.getUuid())) {
-            player.sendMessage("You are not setupping.");
+            player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
             return;
         }
 

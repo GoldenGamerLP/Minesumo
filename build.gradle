@@ -6,31 +6,19 @@ plugins {
 group 'me.alex.minesumo'
 version '1.0-SNAPSHOT'
 
-ext {
-    hscoreVersion = '4.1.32'
-}
-
 repositories {
     mavenCentral()
     mavenLocal()
-
-    //Minestom dependency
     maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    implementation 'com.github.spotbugs:spotbugs-annotations:4.0.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
-
 
     //Minestom dependency
     compileOnly 'com.github.Minestom.Minestom:Minestom:24cc458659'
     //implementation 'me.hsgamer:hscore-minestom-board:4.1.33'
-
-    //Logger
-    implementation 'org.apache.logging.log4j:log4j-api:2.19.0'
-    compileOnly 'org.apache.logging.log4j:log4j-core:2.19.0'
 
     //Schematics
     implementation 'com.github.hollow-cube.common:schem:935bb279e6'
@@ -41,6 +29,12 @@ dependencies {
     //Cache
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.2'
 
+    //Json
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.1'
+    implementation("com.squareup.moshi:moshi:1.14.0")
+    implementation 'com.squareup.moshi:moshi-adapters:1.14.0'
+    //Production only uses GSON
+    implementation 'com.google.code.gson:gson:2.10.1'
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'

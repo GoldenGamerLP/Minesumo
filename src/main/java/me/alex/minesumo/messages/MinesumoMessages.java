@@ -16,7 +16,7 @@ public class MinesumoMessages {
     public static final Component PREFIX = Component.empty()
             .append(Component.text("Minesumo").color(TextColor.color(0xFF763B)))
             .append(Component.text(" | ").color(TextColor.color(0x434256)))
-            .color(TextColor.color(0xD9E2E0));
+            .color(TextColor.color(0xA0AAA7));
 
     private static final String bundleName = "languages";
     private static final Locale[] locales = {
@@ -27,11 +27,12 @@ public class MinesumoMessages {
 
     public static void innit() {
         if (isRegistered) throw new RuntimeException("You cannot register messages twice.");
+        isRegistered = true;
 
         MinestomAdventure.AUTOMATIC_COMPONENT_TRANSLATION = true;
 
         GlobalTranslator globalTranslator = GlobalTranslator.translator();
-        TranslationRegistry registry = TranslationRegistry.create(Key.key("minsumo"));
+        TranslationRegistry registry = TranslationRegistry.create(Key.key("minsumo", "messages"));
 
         for (Locale locale : locales) {
             ResourceBundle bundle = ResourceBundle.getBundle(bundleName, locale);
@@ -39,7 +40,6 @@ public class MinesumoMessages {
         }
 
         globalTranslator.addSource(registry);
-        isRegistered = true;
     }
 
 }

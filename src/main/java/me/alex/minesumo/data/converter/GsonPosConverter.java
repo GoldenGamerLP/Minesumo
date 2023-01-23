@@ -1,11 +1,11 @@
-package me.alex.minesumo.data.configuration.converter;
+package me.alex.minesumo.data.converter;
 
 import com.google.gson.*;
 import net.minestom.server.coordinate.Pos;
 
 import java.lang.reflect.Type;
 
-public class PosConverter implements JsonSerializer<Pos>, JsonDeserializer<Pos> {
+public class GsonPosConverter implements JsonSerializer<Pos>, JsonDeserializer<Pos> {
 
     @Override
     public Pos deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {

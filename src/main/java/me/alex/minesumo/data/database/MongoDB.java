@@ -9,13 +9,10 @@ import com.mongodb.client.MongoClients;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.configuration.MinesumoMainConfig;
+import me.alex.minesumo.data.entities.MinesumoMainConfig;
 import org.bson.Document;
 import org.bson.UuidRepresentation;
 import org.jetbrains.annotations.Blocking;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 @Slf4j
 public class MongoDB {
@@ -33,10 +30,7 @@ public class MongoDB {
                 .uuidRepresentation(UuidRepresentation.JAVA_LEGACY)
                 .build();
 
-
         this.mongoClient = MongoClients.create(settings);
-
-        disableLogging();
 
         if (isConnected()) {
             log.info("Connected to mongodb!");
@@ -44,13 +38,6 @@ public class MongoDB {
             log.error("Could not connect to mongodb!");
             throw new IllegalStateException("Could not connect to mongodb!");
         }
-    }
-
-    void disableLogging() {
-        //Disable logging of "org.mongodb.driver" package
-        Logger mongoLogger = Logger.getLogger(mongoClient.getClass().getPackage().getName());
-        mongoLogger.setLevel(Level.WARNING);
-        mongoLogger.setUseParentHandlers(false);
     }
 
     public void close() {

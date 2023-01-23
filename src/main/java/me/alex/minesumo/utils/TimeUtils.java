@@ -18,6 +18,6 @@ public class TimeUtils {
 
     //Format a date into the format which corresponds to the locale
     public static String formatDate(Date date, Locale locale) {
-        return DateFormat.getDateInstance(DateFormat.LONG, locale).format(date);
+        return DateFormat.getDateInstance(DateFormat.FULL, locale).format(date);
     }
 }

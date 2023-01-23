@@ -48,6 +48,10 @@ This is a Minecraft extension for the gamemode **Sumo**. The plugin was develope
 - The messages are currently only available in German and English.
 - You cannot edit the messages until you edit the **resources** in the classpath.
 
+## Examples
+
+- [Example Configurations with Schematics](https://workupload.com/file/D5xCjZtmSZ6)
+
 ## Pictures
 
 ##### In-Game

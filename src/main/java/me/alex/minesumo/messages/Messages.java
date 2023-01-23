@@ -25,6 +25,11 @@ public enum Messages {
     GAME_COMMAND_WRONG_ARENA_STATE("message.game.commands.failure.state", true),
     GAME_COMMAND_SET_LIVES("message.game.commands.lives", true),
     GAME_COMMAND_GAME_ID("message.game.commands.gameid", true),
+    GAME_COMMAND_MAP_INFO("message.game.commands.mapinfo", true),
+    GAME_COMMAND_SETUP_HELP("message.command.setup.help", true),
+    GAME_COMMAND_SETUP_ERROR_IN_MAP("message.command.setup.error.inSetup", true),
+    GAME_COMMAND_SETUP_ERROR_NO_MAP("message.command.setup.error.notInSetup", true),
+    GAME_COMMAND_SETUP_SETUPPING("message.command.setup.setupping", true),
 
     /*
      * General Messages
@@ -33,7 +38,11 @@ public enum Messages {
     GENERAL_NOT_FOUND("message.general.notfound", true),
     GENERAL_STATS_PLAYER("message.general.stats.player", true),
     GENERAL_STATS_ARENA("message.general.stats.arena", true),
-    GENERAL_STATS_ARENA_HISTORY("message.general.stats.killAndDeathEntry", false);
+    GENERAL_STATS_ARENA_HISTORY("message.general.stats.killAndDeathEntry", false),
+
+    GENERAL_STATS_GLOBAL_TITLE("message.general.stats.global.title", true),
+
+    GENERAL_STATS_GLOBAL_ENTRY("message.general.stats.global.entry", false);
 
     private final String key;
     private final Boolean prefix;

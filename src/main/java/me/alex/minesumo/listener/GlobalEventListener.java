@@ -1,7 +1,7 @@
 package me.alex.minesumo.listener;
 
 import me.alex.minesumo.Minesumo;
-import me.alex.minesumo.data.statistics.PlayerStatistics;
+import me.alex.minesumo.data.entities.PlayerStatistics;
 import me.alex.minesumo.data.statistics.StatisticsManager;
 import me.alex.minesumo.events.ArenaChangeStateEvent;
 import me.alex.minesumo.events.ArenaEndEvent;
@@ -26,8 +26,9 @@ import net.minestom.server.instance.block.Block;
 import java.util.List;
 import java.util.UUID;
 
-public class GlobalEventListener {
+import static net.kyori.adventure.text.Component.text;
 
+public class GlobalEventListener {
     private final InstanceContainer container;
 
     public GlobalEventListener(Minesumo minesumo) {
@@ -65,8 +66,8 @@ public class GlobalEventListener {
             if (event.getState() == ArenaEndEvent.EndState.WIN) {
 
                 component = Messages.GAME_WIN.toTranslatable(
-                        Component.text(event.getTeamId()),
-                        Component.text(player));
+                        text(event.getTeamId()),
+                        text(player));
 
             } else component = Messages.GAME_DRAW.toTranslatable();
 
@@ -81,10 +82,10 @@ public class GlobalEventListener {
                         double kd = kills * 1D / deaths;
                         int team = instance.getPlayersTeamIds().getOrDefault(pls.getUuid(), -1);
                         pls.sendMessage(Messages.GAME_END_SUMMARY_SELF.toTranslatable(
-                                Component.text(kills),
-                                Component.text(deaths),
-                                Component.text(String.format("%1.2f", kd)),
-                                Component.text(team)));
+                                text(kills),
+                                text(deaths),
+                                text(String.format("%1.2f", kd)),
+                                text(team)));
                     }));
 
             instance.sendMessage(component);
@@ -93,8 +94,8 @@ public class GlobalEventListener {
         gl.addListener(TeamEliminatedEvent.class, event -> {
             Instance instance = event.getInstance();
             Component component = Messages.GAME_TEAM_DEATH.toTranslatable(
-                    Component.text(event.getTeamID()),
-                    Component.text(event.getLastDeathPlayerOfTeam().getUsername()));
+                    text(event.getTeamID()),
+                    text(event.getLastDeathPlayerOfTeam().getUsername()));
 
             instance.sendMessage(component);
         });
@@ -106,12 +107,16 @@ public class GlobalEventListener {
             Component component;
             if (event.getAttacker() != null)
                 component = Messages.GAME_DEATH_PLAYER.toTranslatable(
-                        Component.text(user),
-                        Component.text(event.getAttacker().getUsername()));
+                        text(user),
+                        text(event.getAttacker().getUsername()));
             else component = Messages.GAME_DEATH
-                    .toTranslatable(Component.text(user));
+                    .toTranslatable(text(user));
 
             instance.sendMessage(component);
+
+
+            //Remove PVP Tag
+            event.getPlayer().removeTag(PvPEvents.LAST_HIT);
 
             //Stats
             UUID deathID = event.getAttacker() == null ? null : event.getAttacker().getUuid();

@@ -26,6 +26,20 @@ public class StatsCMD extends Command {
             handler.getPlayerStatistics(player.getUuid()).thenAccept(player::sendMessage);
         });
 
+        var allTimeStats = ArgumentType.Literal("top");
+        var limit = ArgumentType.Integer("limit").between(1, 15).setDefaultValue(10);
+        addSyntax((sender, context) -> {
+            int limitValue = context.get(limit);
+            this.handler.getTopPlayers(limitValue).whenComplete((component, throwable) -> {
+                if (throwable != null) {
+                    throwable.printStackTrace();
+                    return;
+                }
+
+                sender.sendMessage(component);
+            });
+        }, allTimeStats, limit);
+
         //GameID subcommand
         var selectID = ArgumentType.Literal("game");
         var gameID = ArgumentType.String("gameID");

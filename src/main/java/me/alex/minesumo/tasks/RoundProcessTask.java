@@ -35,11 +35,13 @@ public class RoundProcessTask extends AbstractTask {
             this.cancel();
 
         Integer[] lifes = arena.getLives();
+        List<Integer> teams = arena.getLivingTeams();
         TextComponent.Builder builder = Component.text();
 
-        for (Integer livingTeam : arena.getLivingTeams()) {
+        for (Integer livingTeam : teams) {
             List<Player> players = arena.getPlayersFromTeam(livingTeam);
-            String player = players.size() > 1 ? players.size() + "" : StringUtils.getFirstXLetters(players.get(0).getUsername(), 9);
+            String player = players.size() > 1 || teams.size() < 2 ?
+                    players.size() + "" : StringUtils.getFirstXLetters(players.get(0).getUsername(), 9);
             String team = livingTeam + "";
             String lives = lifes[livingTeam] + "";
 
