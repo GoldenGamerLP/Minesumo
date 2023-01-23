@@ -50,7 +50,7 @@ This is a Minecraft extension for the gamemode **Sumo**. The plugin was develope
 
 ## Examples
 
-- [Example Configurations with Schematics](https://workupload.com/file/D5xCjZtmSZ6)
+- [Example Configurations with Schematics](https://workupload.com/file/RRzXEPBhz68)
 
 ## Pictures
 
