@@ -5,6 +5,7 @@ import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.entity.Player;
+import net.minestom.server.network.ConnectionState;
 
 import java.util.List;
 
@@ -21,19 +22,30 @@ public class RoundWaitingTask extends AbstractTask {
             return;
         }
 
-        if (arena.getMaxPlayers() == arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE).size())
+        List<Player> players = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
+        List<Player> waitingPlayers = players.stream()
+                .filter(player -> player.getPlayerConnection().getConnectionState() != ConnectionState.PLAY)
+                .toList();
+        boolean canStartButWaitingForPlayer = waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers();
+
+        if (canStartButWaitingForPlayer) {
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
+            this.cancel();
+        }
 
 
-        List<Player> player = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
         int maxPlayers = arena.getMaxPlayers();
 
-        float percentage = player.size() * 1F / maxPlayers;
-        int needed = maxPlayers - player.size();
+        float percentage = players.size() * 1F / maxPlayers;
+        int needed = maxPlayers - players.size();
+
+        Component bossBar = !canStartButWaitingForPlayer ?
+                Messages.GAME_WAITING_PLAYER_LOADING.toTranslatable(Component.text(waitingPlayers.size())) :
+                Messages.GAME_WAITING_PLAYERS.toTranslatable(Component.text(needed));
 
         BossBar bar = arena.getGameBar();
         bar.progress(percentage);
-        bar.name(Messages.GAME_WAITING_PLAYERS.toTranslatable(Component.text(needed)));
+        bar.name(bossBar);
         bar.color(BossBar.Color.YELLOW);
 
         arena.sendActionBar(Messages.GAME_WAITING.toTranslatable());

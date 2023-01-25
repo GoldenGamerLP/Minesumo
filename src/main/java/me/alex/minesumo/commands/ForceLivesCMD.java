@@ -19,7 +19,8 @@ public class ForceLivesCMD extends Command {
 
         int max = minesumo.getConfig().getMaxLives();
         int min = minesumo.getConfig().getMinLives();
-        var lives = ArgumentType.Integer("lives").between(min, max);
+        var lives = ArgumentType.Integer("lives")
+                .between(min, max);
 
 
         addSyntax((sender, context) -> {

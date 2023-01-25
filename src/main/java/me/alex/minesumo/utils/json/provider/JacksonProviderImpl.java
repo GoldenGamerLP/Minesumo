@@ -87,6 +87,7 @@ public class JacksonProviderImpl implements JsonProvider {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> void addSerializer(Class<T> clazz, List<Object> serializers) {
         //Filter valid Serializer and deserializer for Jackson
