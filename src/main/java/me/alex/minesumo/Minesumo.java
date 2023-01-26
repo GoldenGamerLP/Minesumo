@@ -42,11 +42,14 @@ public class Minesumo extends Extension {
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
 
+    
+
     @Override
     public void preInitialize() {
         //Important: If using other json libary -> Change build.gradle to implement the libary
         JsonMapper.init(JsonMapper.JsonProviders.GSON);
 
+        //Add a new serializer for the Pos class
         JsonMapper.JSON_PROVIDER.addSerializer(Pos.class, List.of(
                 new GsonPosConverter(),
                 new JacksonPosSerializer(),

@@ -26,6 +26,8 @@ public class StatsCMD extends Command {
             handler.getPlayerStatistics(player.getUuid()).thenAccept(player::sendMessage);
         });
 
+        //Todo: Tab complete async names in database from mongodb
+
         var allTimeStats = ArgumentType.Literal("top");
         var limit = ArgumentType.Integer("limit").between(1, 15).setDefaultValue(10);
         addSyntax((sender, context) -> {

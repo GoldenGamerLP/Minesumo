@@ -7,12 +7,12 @@ import net.minestom.server.event.EventDispatcher;
 
 public class ArenaPlayerCheck extends AbstractTask {
 
-    private final double minY;
+    private final double maxY;
 
     public ArenaPlayerCheck(ArenaImpl arena) {
         super(arena);
 
-        this.minY = arena.getMapConfig().getDeathLevel();
+        this.maxY = arena.getMapConfig().getDeathLevel();
     }
 
     @Override
@@ -22,7 +22,7 @@ public class ArenaPlayerCheck extends AbstractTask {
 
     private void check(Player player) {
         double y = player.getPosition().y();
-        if (y > minY) return;
+        if (y < maxY) return;
 
         //Event
         EventDispatcher.call(new PlayerOutOfArenaEvent(ArenaPlayerCheck.this.arena, player));
