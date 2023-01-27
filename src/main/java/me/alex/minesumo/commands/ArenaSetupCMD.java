@@ -30,28 +30,20 @@ public class ArenaSetupCMD extends Command {
 
     public ArenaSetupCMD(Minesumo minesumo) {
         super("setup");
+
         this.activeMaps = new HashMap<>();
 
         this.setCondition(Conditions::playerOnly);
 
         var nameArgument = ArgumentType.Word("nameArgument");
-
         var join = ArgumentType.Literal("join");
-
         var set = ArgumentType.Literal("set");
-
         var remove = ArgumentType.Literal("remove");
-
         var add = ArgumentType.Literal("add");
-
         var spawn = ArgumentType.Literal("spawn");
-
         var spectator = ArgumentType.Literal("spectator");
-
         var deathHeight = ArgumentType.Literal("deathHeight");
-
         var spawnID = ArgumentType.Integer("spawnID");
-
         var save = ArgumentType.Literal("SAVE");
 
         nameArgument.setSuggestionCallback((sender, context, suggestion) -> {

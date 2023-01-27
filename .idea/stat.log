@@ -2723,3 +2723,7 @@
 {"ts":1674853000078,"action":"FILE_OPENED","file":"/README.md","tags":{"FILE_LINE_OF_CODE":"85"}}
 {"ts":1674853066629,"action":"IDE_DEACTIVATED"}
 {"ts":1674853111460,"action":"IDE_ACTIVATED"}
+{"ts":1674853172597,"action":"IDE_DEACTIVATED"}
+{"ts":1674853374093,"action":"IDE_ACTIVATED"}
+{"ts":1674853378207,"action":"FILE_CLOSED","file":"/README.md","tags":{"FILE_LINE_OF_CODE":"88"}}
+{"ts":1674853378207,"action":"FILE_OPENED","file":"/src/main/java/me/alex/minesumo/commands/ArenaSetupCMD.java","tags":{"FILE_LINE_OF_CODE":"241"}}
