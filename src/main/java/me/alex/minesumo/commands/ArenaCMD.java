@@ -15,7 +15,9 @@ public class ArenaCMD extends Command {
         super(name);
 
         var arg = ArgumentType.Literal("isArena");
-        var playerArg = ArgumentType.Entity("player").onlyPlayers(true).singleEntity(true);
+        var playerArg = ArgumentType.Entity("player")
+                .onlyPlayers(true)
+                .singleEntity(true);
 
         var change = ArgumentType.Literal("change");
         var changeEnum = ArgumentType.Enum("state", ArenaImpl.ArenaState.class);

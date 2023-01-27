@@ -25,8 +25,9 @@ public class RoundEndingTask extends AbstractTask {
 
         Component translated = Messages.GAME_ENDING.toTranslatable(Component.text(seconds));
 
-        if (seconds % 10 == 0 || seconds <= 3)
+        if (seconds % 10 == 0 || seconds <= 3) {
             arena.sendMessage(translated);
+        }
 
         BossBar bar = arena.getGameBar();
         bar.progress(seconds * 1F / roundEndingTime.getSeconds());

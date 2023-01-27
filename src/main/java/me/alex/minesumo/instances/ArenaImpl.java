@@ -111,23 +111,30 @@ public class ArenaImpl extends AbstractArena {
 
 
     private void handlePlayerLeaveArenaEvent(RemoveEntityFromInstanceEvent event) {
+        //Get the player who left the arena
         if (!(event.getEntity() instanceof Player player)) return;
 
-
+        //Hide the boss bar
         player.hideBossBar(gameBar);
 
+        //If the player was not playing in this arena, ignore the event
         if (!this.playerStates.containsKey(player.getUuid())) return;
         //If player was spectator - ignore
         if (this.playerStates.remove(player.getUuid()) == PlayerState.SPECTATOR) return;
 
+        //If the arena is in the starting state, switch it to waiting for players
         switch (getState()) {
             case NORMAL_STARTING -> this.changeArenaState(ArenaState.WAITING_FOR_PLAYERS);
             case INGAME -> {
+                //Get a list of living teams
                 List<Integer> teams = getLivingTeams();
+                //Get the player's team
                 int team = this.getTeams().get(player.getUuid());
 
+                //Call the PlayerDeathEvent
                 EventDispatcher.call(new PlayerDeathEvent(this, player, null, team, lives[team]));
 
+                //If the team has no more players, call the TeamEliminatedEvent
                 if (!teams.contains(team))
                     EventDispatcher.call(new TeamEliminatedEvent(this, team, player, null));
 
@@ -141,7 +148,7 @@ public class ArenaImpl extends AbstractArena {
             }
         }
 
-        //Events
+        //Call the PlayerLeaveArenaEvent
         EventDispatcher.call(new PlayerLeaveArenaEvent(this, player));
     }
 
@@ -150,51 +157,55 @@ public class ArenaImpl extends AbstractArena {
         player.showBossBar(gameBar);
 
         switch (getState()) {
-            case ENDING, NORMAL_STARTING, INGAME -> //Spectators only see spectators
-                    makePlayerSpectator(player);
-
+            case ENDING, NORMAL_STARTING, INGAME -> {
+                makePlayerSpectator(player);
+            }
             case WAITING_FOR_PLAYERS -> {
-                //register player
                 this.playerStates.put(player.getUuid(), PlayerState.ALIVE);
-
-                //Player can only see each other in a instance
                 player.setRespawnPoint(this.mapConfig.getSpectatorPosition());
                 player.teleport(this.mapConfig.getSpectatorPosition());
                 player.setGameMode(GameMode.ADVENTURE);
 
-                //Method --> areEnoughPlayers();
                 if (getPlayerFromState(PlayerState.ALIVE).size() == getMaxPlayers())
                     this.changeArenaState(ArenaState.NORMAL_STARTING);
-
             }
             default -> throw new IllegalStateException("Player cannot be in a loaded arena!");
         }
 
-        //Event calling
         EventDispatcher.call(new PlayerJoinArenaEvent(this, player));
     }
 
     private void makePlayerSpectator(Player player) {
+        //Spectators only see spectators and players cant see spectators use player#setViewable
+        player.updateViewableRule(player1 -> player1.getGameMode() == GameMode.SPECTATOR || player1.getGameMode() == GameMode.ADVENTURE);
+
+        //register player
         player.setAutoViewable(false);
-        player.updateViewableRule(player1 -> this.playerStates.get(player1.getUuid()).equals(PlayerState.ALIVE));
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(this.mapConfig.getSpectatorPosition());
 
-        //register player
         this.playerStates.put(player.getUuid(), PlayerState.SPECTATOR);
     }
 
 
+    /**
+     * Unregisters this instance from the game.
+     */
     public void unregisterInstance() {
+        // Kick all players
         getPlayers().forEach(player -> player.kick("Ended Arena"));
 
+        // Cancel and purge the timer
         this.timer.cancel();
         this.timer.purge();
 
+        // Schedule the code that will run after the timer is cancelled and purged
         this.scheduler().scheduleTask(() -> {
+            // Clear the player teams
             this.playersTeamIds.clear();
             this.playerStates.clear();
 
+            // Unregister the instance
             MinecraftServer.getInstanceManager().unregisterInstance(ArenaImpl.this);
             log.info("Ended Arena {} with UUID {}", this.getGameID(), this.uniqueId);
         }, TaskSchedule.millis(100), TaskSchedule.stop());
@@ -209,39 +220,29 @@ public class ArenaImpl extends AbstractArena {
                     teleportPlayerToSpawn(player);
                     return;
                 }
-
                 //Player Death
                 Integer pteam = this.playersTeamIds.get(player.getUuid());
-                Integer plifes = lives[pteam];
-
                 Player attacker = MinecraftServer.getConnectionManager()
                         .getPlayer(player.getTag(PvPEvents.LAST_HIT));
-
-                EventDispatcher.call(new PlayerDeathEvent(this, player, attacker, pteam, plifes));
-
-                if (plifes == 0) {
+                EventDispatcher.call(new PlayerDeathEvent(this, player, attacker, pteam, lives[pteam]));
+                if (lives[pteam] == 0) {
                     makePlayerSpectator(player);
-
                     //For PVP
                     player.removeTag(PvPEvents.TEAM_TAG);
-
                     List<Integer> livingTeam = getLivingTeams();
                     if (!livingTeam.contains(pteam))
                         //Team Eliminated
                         EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player, attacker));
-
                     int size = livingTeam.size();
                     if (size <= 1) {
                         //End Arena because last team standing
                         ArenaEndEvent.EndState state = size == 0 ? ArenaEndEvent.EndState.DRAW : ArenaEndEvent.EndState.WIN;
                         List<Player> players = size == 0 ? getPlayerFromState(PlayerState.ALIVE) : getPlayersFromTeam(livingTeam.get(0));
                         int teamID = size == 0 ? 0 : livingTeam.get(0);
-
                         EventDispatcher.call(new ArenaEndEvent(this, state, players, teamID));
                         this.changeArenaState(ArenaState.ENDING);
                     }
-                } else lives[pteam] = plifes - 1;
-
+                } else lives[pteam]--;
                 teleportPlayerToSpawn(player);
             }
             default -> {
@@ -255,49 +256,51 @@ public class ArenaImpl extends AbstractArena {
     }
 
     public void addPlayersToTeam() {
+        // Distribute players evenly among the teams.
         List<List<Player>> teams = ListUtils.distributeNumbers(
                 this.getPlayerFromState(PlayerState.ALIVE),
                 this.mapConfig.getSpawnPositions().size());
 
         this.lives = new Integer[teams.size() + 1];
 
-
         for (int team = 0; team < teams.size(); team++) {
             List<Player> players = teams.get(team);
 
-            //Skip empty teams
+            // Skip empty teams
             if (players.size() == 0) continue;
 
-            //Leben in einem Team
+            // Set the lives of this team
             this.lives[team] = this.getMaxLives() * players.size();
 
             for (Player player : players) {
+                // Assign the player to this team
                 this.playersTeamIds.put(player.getUuid(), team);
 
-                //FOR PvP
+                // FOR PvP
                 player.setTag(PvPEvents.TEAM_TAG, team);
             }
         }
     }
 
     public void teleportPlayerToSpawn(Player player) {
+        // Only spectators are teleported to the spectator spawn.
         if (!this.playerStates.containsKey(player.getUuid())
                 || !this.playersTeamIds.containsKey(player.getUuid())) {
-            //Only specators
             player.teleport(this.mapConfig.getSpectatorPosition());
             return;
         }
 
-
-        //Ingame players
+        // Ingame players are teleported to their team spawn.
         int playerTeam = this.playersTeamIds.get(player.getUuid());
         player.teleport(this.mapConfig.getSpawnPositions().get(playerTeam));
     }
 
     public List<Player> getPlayerFromState(PlayerState playerState) {
-        return this.getPlayers()
+        return this.playerStates.entrySet()
                 .stream()
-                .filter(player -> this.playerStates.get(player.getUuid()).equals(playerState))
+                .filter(entry -> entry.getValue().equals(playerState))
+                .map(Map.Entry::getKey)
+                .map(MinecraftServer.getConnectionManager()::getPlayer)
                 .toList();
     }
 
@@ -306,12 +309,12 @@ public class ArenaImpl extends AbstractArena {
     }
 
     public List<Player> getPlayersFromTeam(final Integer team) {
-        if (!this.playersTeamIds.containsValue(team)) return List.of();
         return playersTeamIds.entrySet()
                 .stream()
                 .filter(uuidIntegerEntry -> Objects.equals(uuidIntegerEntry.getValue(), team))
                 .map(Map.Entry::getKey)
                 .map(MinecraftServer.getConnectionManager()::getPlayer)
+                .filter(Objects::nonNull)
                 .toList();
     }
 

@@ -7,6 +7,9 @@ This is a Minecraft extension for the gamemode **Sumo**. The plugin was develope
 ## Download Link
 - [Latest Build of Minesumo](https://nightly.link/GoldenGamerLP/Minesumo/workflows/gradle_build/master/artifact.zip)
 
+## Wanna test it yourself?
+- Check it out at **www.strage.ovh:45565** with Minecraft Version 1.19.2!
+
 ## Features
 
 - [x] Automatic Arena Queuing

@@ -30,28 +30,20 @@ public class ArenaSetupCMD extends Command {
 
     public ArenaSetupCMD(Minesumo minesumo) {
         super("setup");
+
         this.activeMaps = new HashMap<>();
 
         this.setCondition(Conditions::playerOnly);
 
         var nameArgument = ArgumentType.Word("nameArgument");
-
         var join = ArgumentType.Literal("join");
-
         var set = ArgumentType.Literal("set");
-
         var remove = ArgumentType.Literal("remove");
-
         var add = ArgumentType.Literal("add");
-
         var spawn = ArgumentType.Literal("spawn");
-
         var spectator = ArgumentType.Literal("spectator");
-
         var deathHeight = ArgumentType.Literal("deathHeight");
-
         var spawnID = ArgumentType.Integer("spawnID");
-
         var save = ArgumentType.Literal("SAVE");
 
         nameArgument.setSuggestionCallback((sender, context, suggestion) -> {
@@ -76,11 +68,16 @@ public class ArenaSetupCMD extends Command {
                 return;
             }
 
-            Path schematic = minesumo.getSchematicLoader().getSchematicFolder()
-                    .resolve(context.get(nameArgument));
+            Path schematicFolder = minesumo.getSchematicLoader().getSchematicFolder();
+            Path schematic = schematicFolder.resolve(context.get(nameArgument));
 
             if (!Files.exists(schematic)) {
                 player.sendMessage("The schematic does not exist");
+                return;
+            }
+
+            if (!schematic.getFileName().toString().endsWith(".schem")) {
+                player.sendMessage("The schematic must have the extension \".schem\"");
                 return;
             }
 
@@ -117,8 +114,9 @@ public class ArenaSetupCMD extends Command {
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
-            if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
+
+            MapConfig mapConfig = getMapConfig(player);
+            if (mapConfig == null) {
                 return;
             }
 
@@ -129,8 +127,9 @@ public class ArenaSetupCMD extends Command {
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
-            if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
+
+            MapConfig mapConfig = getMapConfig(player);
+            if (mapConfig == null) {
                 return;
             }
 
@@ -139,8 +138,6 @@ public class ArenaSetupCMD extends Command {
                 player.sendMessage("The y level cannot be null.");
                 return;
             }
-
-            MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
 
             if (mapConfig.getSpawnPositions().isEmpty()) {
                 player.sendMessage("Set spawn positions before setting death level");
@@ -166,13 +163,13 @@ public class ArenaSetupCMD extends Command {
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
-            if (!this.activeMaps.containsKey(player.getUuid())) {
-                player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
+
+            MapConfig mapConfig = getMapConfig(player);
+            if (mapConfig == null) {
                 return;
             }
 
-            MapConfig config = this.activeMaps.remove(player.getUuid()).getConfig();
-            minesumo.getMapConfig().getConfigurations().add(config);
+            minesumo.getMapConfig().getConfigurations().add(mapConfig);
 
             player.sendMessage("Please restart to ensure using the config correctly. \n You can setup another arena.");
 
@@ -187,11 +184,25 @@ public class ArenaSetupCMD extends Command {
         MinecraftServer.getCommandManager().register(this);
     }
 
+    private void addSpawn(CommandSender sender, CommandContext commandContext) {
+        Player player = (Player) sender;
+
+        MapConfig mapConfig = getMapConfig(player);
+        if (mapConfig == null) {
+            return;
+        }
+
+        Pos pos = player.getPosition();
+        mapConfig.getSpawnPositions().add(pos);
+        int index = mapConfig.getSpawnPositions().indexOf(pos);
+        player.sendMessage("Added a spawn at " + player.getPosition() + " with ID: " + index);
+    }
+
     private void removeSpawn(CommandSender sender, CommandContext commandContext) {
         Player player = (Player) sender;
 
-        if (!this.activeMaps.containsKey(player.getUuid())) {
-            player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
+        MapConfig mapConfig = getMapConfig(player);
+        if (mapConfig == null) {
             return;
         }
 
@@ -201,7 +212,6 @@ public class ArenaSetupCMD extends Command {
             return;
         }
 
-        MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
         if (mapConfig.getSpawnPositions().get(index) == null) {
             player.sendMessage("The spawn position at " + index + " is not available.");
             return;
@@ -211,20 +221,12 @@ public class ArenaSetupCMD extends Command {
         player.sendMessage("Removed " + before + " with ID: " + index);
     }
 
-    private void addSpawn(CommandSender sender, CommandContext commandContext) {
-        Player player = (Player) sender;
-
+    private MapConfig getMapConfig(Player player) {
         if (!this.activeMaps.containsKey(player.getUuid())) {
             player.sendMessage(Messages.GAME_COMMAND_SETUP_ERROR_NO_MAP.toTranslatable());
-            return;
+            return null;
         }
 
-        MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
-
-        Pos pos = player.getPosition();
-        mapConfig.getSpawnPositions().add(pos);
-        int index = mapConfig.getSpawnPositions().indexOf(pos);
-        player.sendMessage("Added a spawn at " + player.getPosition() + " with ID: " + index);
-
+        return this.activeMaps.get(player.getUuid()).getConfig();
     }
 }

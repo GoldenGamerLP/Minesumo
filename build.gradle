@@ -7,9 +7,8 @@ group 'me.alex.minesumo'
 version '1.0-SNAPSHOT'
 
 repositories {
-    mavenCentral()
-    mavenLocal()
     maven { url 'https://jitpack.io' }
+    mavenCentral()
 }
 
 dependencies {
@@ -17,7 +16,7 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
 
     //Minestom dependency
-    compileOnly 'com.github.Minestom.Minestom:Minestom:24cc458659'
+    compileOnly 'com.github.Minestom.Minestom:Minestom:51ef4779c9'
     //implementation 'me.hsgamer:hscore-minestom-board:4.1.33'
 
     //Schematics

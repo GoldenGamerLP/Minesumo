@@ -12,6 +12,7 @@ public enum Messages {
     GAME_STARTING_TITLE("message.game.starting.title", false),
     GAME_WAITING("message.game.waiting", true),
     GAME_WAITING_PLAYERS("message.game.waiting.players", false),
+    GAME_WAITING_PLAYER_LOADING("message.game.waiting.init", false),
     GAME_TEAM_DEATH("message.game.death.final", true),
     GAME_DEATH("message.game.death", true),
     GAME_DEATH_PLAYER("message.game.death.player", true),
