@@ -122,7 +122,7 @@ public class ArenaSetupCMD extends Command {
 
         addSyntax((sender, context) -> {
             Player player = (Player) sender;
-            
+
             MapConfig mapConfig = getMapConfig(player);
             if (mapConfig == null) {
                 return;
@@ -146,8 +146,6 @@ public class ArenaSetupCMD extends Command {
                 player.sendMessage("The y level cannot be null.");
                 return;
             }
-
-            MapConfig mapConfig = this.activeMaps.get(player.getUuid()).getConfig();
 
             if (mapConfig.getSpawnPositions().isEmpty()) {
                 player.sendMessage("Set spawn positions before setting death level");
@@ -179,7 +177,7 @@ public class ArenaSetupCMD extends Command {
                 return;
             }
 
-            minesumo.getMapConfig().getConfigurations().add(config);
+            minesumo.getMapConfig().getConfigurations().add(mapConfig);
 
             player.sendMessage("Please restart to ensure using the config correctly. \n You can setup another arena.");
 

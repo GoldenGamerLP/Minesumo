@@ -28,7 +28,7 @@ public class RoundWaitingTask extends AbstractTask {
                 .toList();
         boolean canStartButWaitingForPlayer = waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers();
 
-        if (canStartButWaitingForPlayer) {
+        if (waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers()) {
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
             this.cancel();
         }
@@ -39,7 +39,7 @@ public class RoundWaitingTask extends AbstractTask {
         float percentage = players.size() * 1F / maxPlayers;
         int needed = maxPlayers - players.size();
 
-        Component bossBar = !canStartButWaitingForPlayer ?
+        Component bossBar = !waitingPlayers.isEmpty() ?
                 Messages.GAME_WAITING_PLAYER_LOADING.toTranslatable(Component.text(waitingPlayers.size())) :
                 Messages.GAME_WAITING_PLAYERS.toTranslatable(Component.text(needed));
 

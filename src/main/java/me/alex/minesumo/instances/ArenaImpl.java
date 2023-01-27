@@ -83,36 +83,25 @@ public class ArenaImpl extends AbstractArena {
         });
 
         node.addListener(ArenaChangeStateEvent.class, arena -> {
+            //Start tasks
             switch (arena.getArena().getState()) {
-                case WAITING_FOR_PLAYERS -> {
-                    //Start tasks
-                    this.timer.scheduleAtFixedRate(
-                            this.roundWaitingPlayers,
-                            0,
-                            Duration.ofSeconds(1).toMillis());
-                }
-                case NORMAL_STARTING -> {
-                    //Start tasks
-                    this.timer.scheduleAtFixedRate(
-                            this.roundStartingTask,
-                            0,
-                            Duration.ofSeconds(1).toMillis()
-                    );
-                }
-                case INGAME -> {
-                    //Start tasks
-                    this.timer.scheduleAtFixedRate(
-                            this.roundProcessTask,
-                            0,
-                            Duration.ofSeconds(1).toMillis());
-                }
-                case ENDING -> {
-                    //Start tasks
-                    this.timer.scheduleAtFixedRate(
-                            this.roundEndingTask,
-                            0,
-                            Duration.ofSeconds(1).toMillis());
-                }
+                case WAITING_FOR_PLAYERS -> this.timer.scheduleAtFixedRate(
+                        this.roundWaitingPlayers,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+                case NORMAL_STARTING -> this.timer.scheduleAtFixedRate(
+                        this.roundStartingTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis()
+                );
+                case INGAME -> this.timer.scheduleAtFixedRate(
+                        this.roundProcessTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
+                case ENDING -> this.timer.scheduleAtFixedRate(
+                        this.roundEndingTask,
+                        0,
+                        Duration.ofSeconds(1).toMillis());
                 default -> {
                 }
             }
@@ -187,8 +176,9 @@ public class ArenaImpl extends AbstractArena {
     }
 
     private void makePlayerSpectator(Player player) {
-        //Spectators only see spectators and players cant see spectators
-        player.setViewableRule(player1 -> this.playerStates.get(player1.getUuid()).equals(PlayerState.SPECTATOR));
+        //Spectators only see spectators and players cant see spectators use player#setViewable
+        player.updateViewableRule(player1 -> player1.getGameMode() == GameMode.SPECTATOR || player1.getGameMode() == GameMode.ADVENTURE);
+
         //register player
         player.setAutoViewable(false);
         player.setGameMode(GameMode.SPECTATOR);

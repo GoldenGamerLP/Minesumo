@@ -22,9 +22,8 @@ public class ArenaPlayerCheck extends AbstractTask {
 
     private void check(Player player) {
         double y = player.getPosition().y();
-        if (y < maxY) return;
+        if (y > maxY) return;
 
-        //Event
         EventDispatcher.call(new PlayerOutOfArenaEvent(ArenaPlayerCheck.this.arena, player));
     }
 }

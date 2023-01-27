@@ -42,7 +42,6 @@ public class Minesumo extends Extension {
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
 
-    
 
     @Override
     public void preInitialize() {
