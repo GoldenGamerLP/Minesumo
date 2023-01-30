@@ -18,8 +18,12 @@ import me.alex.minesumo.map.MapCreator;
 import me.alex.minesumo.map.MapSelection;
 import me.alex.minesumo.map.SchematicHandler;
 import me.alex.minesumo.messages.MinesumoMessages;
+import me.alex.minesumo.tablist.TabManager;
 import me.alex.minesumo.utils.json.JsonMapper;
 import me.alex.minesumo.utils.json.configurations.JsonConfigurationLoader;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.extensions.Extension;
 
@@ -105,6 +109,19 @@ public class Minesumo extends Extension {
         new GameIdCMD(this);
         new StatsCMD(this);
         new MapInfoCMD(this);
+
+        TabManager.defaultPrefix((player, teamBuilder) -> {
+            teamBuilder.withColor(NamedTextColor.GRAY);
+            long ranking = getStatsHandler().getPlayers().join() -
+                    (getStatsHandler().getPlayerRanking(player.getUuid()).join() - 1);
+
+            Component suffix = Component.text(" | ").color(NamedTextColor.GRAY)
+                    .append(Component.text(ranking).color(NamedTextColor.GOLD));
+
+            teamBuilder.withSuffix(suffix);
+        });
+
+        MinecraftServer.getGlobalEventHandler().addChild(TabManager.getNode());
 
         log.info("Minesumo has been initialized!");
         log.info("Took {}ms", System.currentTimeMillis() - startTime);

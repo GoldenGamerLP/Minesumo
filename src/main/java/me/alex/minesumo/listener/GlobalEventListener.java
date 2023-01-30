@@ -146,6 +146,8 @@ public class GlobalEventListener {
                     .getPlayerCache()
                     .synchronous()
                     .invalidate(event.getPlayer().getUuid());
+
+            //TODO: Remove from Tab
         });
 
         if (!isEditorMode)

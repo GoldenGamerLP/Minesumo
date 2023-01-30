@@ -175,7 +175,7 @@ public class ArenaImpl extends AbstractArena {
         EventDispatcher.call(new PlayerJoinArenaEvent(this, player));
     }
 
-    private void makePlayerSpectator(Player player) {
+    public void makePlayerSpectator(Player player) {
         //Spectators only see spectators and players cant see spectators use player#setViewable
         player.updateViewableRule(player1 -> player1.getGameMode() == GameMode.SPECTATOR || player1.getGameMode() == GameMode.ADVENTURE);
 
@@ -183,6 +183,8 @@ public class ArenaImpl extends AbstractArena {
         player.setAutoViewable(false);
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(this.mapConfig.getSpectatorPosition());
+
+        //Todo: Tab!
 
         this.playerStates.put(player.getUuid(), PlayerState.SPECTATOR);
     }

@@ -66,6 +66,7 @@ public class MapSelection {
 
 
             Player player = iterator.next();
+            if (!player.isOnline()) return;
             player.setInstance(instance);
         }, TaskSchedule.tick(1), TaskSchedule.tick(1));
     }

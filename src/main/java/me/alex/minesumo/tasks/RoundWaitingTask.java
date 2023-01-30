@@ -5,7 +5,6 @@ import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.entity.Player;
-import net.minestom.server.network.ConnectionState;
 
 import java.util.List;
 
@@ -23,9 +22,7 @@ public class RoundWaitingTask extends AbstractTask {
         }
 
         List<Player> players = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
-        List<Player> waitingPlayers = players.stream()
-                .filter(player -> player.getPlayerConnection().getConnectionState() != ConnectionState.PLAY)
-                .toList();
+        List<Player> waitingPlayers = players.stream().filter(Player::isActive).toList();
         boolean canStartButWaitingForPlayer = waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers();
 
         if (waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers()) {
@@ -33,9 +30,7 @@ public class RoundWaitingTask extends AbstractTask {
             this.cancel();
         }
 
-
         int maxPlayers = arena.getMaxPlayers();
-
         float percentage = players.size() * 1F / maxPlayers;
         int needed = maxPlayers - players.size();
 
