@@ -30,10 +30,13 @@ dependencies {
 
     //Json
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.1'
-    implementation("com.squareup.moshi:moshi:1.14.0")
+    implementation 'com.squareup.moshi:moshi:1.14.0'
     implementation 'com.squareup.moshi:moshi-adapters:1.14.0'
     //Production only uses GSON
     implementation 'com.google.code.gson:gson:2.10.1'
+
+    //LuckPerms
+    compileOnly 'net.luckperms:api:5.4'
 
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'

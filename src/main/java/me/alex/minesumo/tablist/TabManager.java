@@ -10,6 +10,7 @@ import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.event.trait.PlayerEvent;
+import net.minestom.server.network.packet.server.play.TeamsPacket;
 import net.minestom.server.scoreboard.Team;
 import net.minestom.server.scoreboard.TeamBuilder;
 import net.minestom.server.scoreboard.TeamManager;
@@ -75,6 +76,9 @@ public final class TabManager {
                 builder.prefix(event.getPrefix());
                 builder.suffix(event.getSuffix());
                 builder.teamColor(event.getColor());
+                builder.collisionRule(TeamsPacket.CollisionRule.NEVER);
+                builder.updateNameTagVisibility(TeamsPacket.NameTagVisibility.ALWAYS);
+                builder.seeInvisiblePlayers();
             });
 
             //Update the player

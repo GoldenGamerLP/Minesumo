@@ -8,6 +8,8 @@ import com.google.gson.Gson;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.TextSearchOptions;
 import lombok.Getter;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.entities.ArenaStatistics;
@@ -109,7 +111,7 @@ public class StatisticDB {
 
     @NotNull
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
-        Bson filter = playerFilter(name);
+        Bson filter = Filters.text(name, new TextSearchOptions().caseSensitive(false));
 
         return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, () -> null));
     }

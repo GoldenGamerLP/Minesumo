@@ -23,11 +23,15 @@ import me.alex.minesumo.utils.json.JsonMapper;
 import me.alex.minesumo.utils.json.configurations.JsonConfigurationLoader;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.LuckPermsProvider;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
+import net.minestom.server.entity.Player;
 import net.minestom.server.extensions.Extension;
 
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -45,6 +49,7 @@ public class Minesumo extends Extension {
     private StatisticsManager statisticsManager;
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
+    private LuckPerms luckPerms;
 
 
     @Override
@@ -59,6 +64,8 @@ public class Minesumo extends Extension {
                 new MoshiPosConverter(),
                 new JacksonPosDeserializer())
         );
+
+        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism","4");
 
         //For Config Uses
         this.mainCFG = new JsonConfigurationLoader<>(
@@ -97,6 +104,7 @@ public class Minesumo extends Extension {
         this.statisticFormatter = new StatisticFormatter(this);
         this.mapSelection = new MapSelection(this);
 
+
         new GlobalEventListener(this);
 
         if (getConfig().getIsInEditorMode()) {
@@ -111,21 +119,28 @@ public class Minesumo extends Extension {
         new MapInfoCMD(this);
 
         TabManager.defaultPrefix((player, teamBuilder) -> {
+            if(luckPerms != null) {
+                String pref = luckPerms.getPlayerAdapter(Player.class).getMetaData(player).getPrefix();
+                if(pref != null)
+                    teamBuilder.withPrefix(Component.text(pref));
+
+            } else teamBuilder.withPrefix(Component.text(" "));
+
             teamBuilder.withColor(NamedTextColor.GRAY);
             long ranking = getStatsHandler().getPlayers().join() -
                     (getStatsHandler().getPlayerRanking(player.getUuid()).join() - 1);
 
             Component suffix = Component.text(" | ").color(NamedTextColor.GRAY)
-                    .append(Component.text(ranking).color(NamedTextColor.GOLD));
+                    .append(Component.text(ranking).color(NamedTextColor.YELLOW));
 
             teamBuilder.withSuffix(suffix);
         });
 
         MinecraftServer.getGlobalEventHandler().addChild(TabManager.getNode());
 
+        hasStarted.set(true);
         log.info("Minesumo has been initialized!");
         log.info("Took {}ms", System.currentTimeMillis() - startTime);
-        hasStarted.set(true);
     }
 
     @Override
@@ -142,6 +157,16 @@ public class Minesumo extends Extension {
         }
         this.mainCFG = null;
         this.mapCFG = null;
+    }
+
+    public void getLuckperms() {
+        //Test if class is available and try and catch
+        try {
+            Class.forName("net.luckperms.api.LuckPerms");
+            this.luckPerms = LuckPermsProvider.get();
+        } catch (ClassNotFoundException e) {
+            log.error("LuckPerms is not installed!");
+        }
     }
 
     public MinesumoMainConfig getConfig() {
