@@ -29,7 +29,7 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.2'
 
     //Json
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
     implementation("com.squareup.moshi:moshi:1.14.0")
     implementation 'com.squareup.moshi:moshi-adapters:1.14.0'
     //Production only uses GSON
