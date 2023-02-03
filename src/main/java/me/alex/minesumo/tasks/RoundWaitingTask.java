@@ -5,6 +5,7 @@ import me.alex.minesumo.messages.Messages;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.entity.Player;
+import net.minestom.server.network.ConnectionState;
 
 import java.util.List;
 
@@ -22,8 +23,13 @@ public class RoundWaitingTask extends AbstractTask {
         }
 
         List<Player> players = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
-        List<Player> waitingPlayers = players.stream().filter(Player::isActive).toList();
-        boolean canStartButWaitingForPlayer = waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers();
+        //A list of players that are still loading or in a loading screen or did not answer a keep alive packet
+        List<Player> waitingPlayers = players.stream().filter(player ->
+                        !player.isOnline() ||
+                                !player.isActive() ||
+                                !player.didAnswerKeepAlive() ||
+                                !(player.getPlayerConnection().getConnectionState() == ConnectionState.PLAY))
+                .toList();
 
         if (waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers()) {
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);

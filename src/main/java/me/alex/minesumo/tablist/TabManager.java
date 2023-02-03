@@ -50,16 +50,7 @@ public final class TabManager {
         //Prefix on player spawn event
         NODE.addListener(PlayerSpawnEvent.class, event -> {
             Player player = event.getPlayer();
-
-            //Run async because of the database
-            scheduler.scheduleNextTick(() -> {
-                me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
-                defPrefix.accept(player, builder);
-                me.alex.minesumo.tablist.Team team = builder.build();
-
-                TablistPlayerChangeEvent tabChangeEvent = new TablistPlayerChangeEvent(player, team.getPrefix(), team.getSuffix(), team.getColor());
-                EventDispatcher.call(tabChangeEvent);
-            }, ExecutionType.ASYNC);
+            resetPlayer(player);
         });
 
         NODE.addListener(TablistPlayerChangeEvent.class, event -> {
@@ -108,6 +99,24 @@ public final class TabManager {
      */
     public static EventNode<PlayerEvent> getNode() {
         return NODE;
+    }
+
+    //Reset
+
+    /**
+     * Resets the player to the default prefix
+     *
+     * @param player the player
+     */
+    public static void resetPlayer(Player player) {
+        scheduler.scheduleNextTick(() -> {
+            me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
+            defPrefix.accept(player, builder);
+            me.alex.minesumo.tablist.Team team = builder.build();
+
+            TablistPlayerChangeEvent tabChangeEvent = new TablistPlayerChangeEvent(player, team.getPrefix(), team.getSuffix(), team.getColor());
+            EventDispatcher.call(tabChangeEvent);
+        }, ExecutionType.ASYNC);
     }
 
     /**

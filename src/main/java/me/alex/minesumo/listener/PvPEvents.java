@@ -25,11 +25,11 @@ public class PvPEvents {
     private static final Tag<Boolean> isHitable = Tag.Boolean("isHitable");
 
     private static final LegacyKnockbackSettings settings = LegacyKnockbackSettings.builder()
-            .horizontal(0.43)
+            .horizontal(0.45)
             .vertical(0.36)
             .verticalLimit(0.4308)
             .extraHorizontal(0.6)
-            .extraVertical(0.15)
+            .extraVertical(0.17)
             .build();
 
     static {

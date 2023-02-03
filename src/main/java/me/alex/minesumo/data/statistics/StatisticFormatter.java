@@ -14,6 +14,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
+import org.bson.Document;
 import org.jetbrains.annotations.Blocking;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,13 +41,12 @@ public class StatisticFormatter {
         });
     }
 
-
     //Player statistics from minecraft name
     public CompletableFuture<Component> getPlayerStatistics(String name) {
         if (!MojangUtils.isValidName(name)) return CompletableFuture
                 .completedFuture(Messages.GENERAL_NOT_FOUND.toTranslatable());
 
-        return this.handler.playerExists(name).thenApply(exists -> {
+        return this.handler.playerExists(name).thenApplyAsync(exists -> {
             if (!exists) return Messages.GENERAL_NOT_FOUND.toTranslatable();
 
             return this.handler.getPlayerStatistics(name).thenApply(this::formatPlayerStats).join();
@@ -91,6 +91,7 @@ public class StatisticFormatter {
             String killer = history.getAttacker() == null ?
                     "NaN" : participants.get(history.getAttacker()).getLastName();
             String victim = participants.get(history.getDead()).getLastName();
+            String after = TimeUtils.formatTime(statistics.getStart(), history.getTime());
 
             deathAndKillHistory
                     .append(Component.text(" "))
@@ -98,9 +99,30 @@ public class StatisticFormatter {
                             .toTranslatable(
                                     Component.text(i + 1).color(NamedTextColor.GOLD),
                                     Component.text(victim).color(NamedTextColor.YELLOW),
-                                    Component.text(killer).color(NamedTextColor.YELLOW)
+                                    Component.text(killer).color(NamedTextColor.YELLOW),
+                                    Component.text(after).color(NamedTextColor.YELLOW)
                             ))
                     .appendNewline();
+        }
+
+        TextComponent.Builder playerTeams = Component.text().appendNewline();
+        Map<Integer, List<UUID>> teams = statistics.getTeams();
+        //go through the teams and format it
+        if(teams != null && teams.size() > 0) {
+            for (Map.Entry<Integer, List<UUID>> entry : statistics.getTeams().entrySet()) {
+                String team = String.format("%02d", entry.getKey() + 1);
+                String teamsPlayers = ListUtils.formatList(entry.getValue(), uuid -> participants.get(uuid).getLastName());
+
+                playerTeams.append(Component.text(" "))
+                        .append(Messages.GAME_TEAM_ENTRY
+                                .toTranslatable(
+                                        Component.text(team).color(NamedTextColor.GOLD),
+                                        Component.text(teamsPlayers).color(NamedTextColor.YELLOW)
+                                ))
+                        .appendNewline();
+            }
+        } else {
+            playerTeams.append(Component.text("Not supported by this game").color(TextColor.color(0xFF0000)));
         }
 
         return Messages.GENERAL_STATS_ARENA.toTranslatable(
@@ -110,7 +132,9 @@ public class StatisticFormatter {
                 Component.text(duration).color(NamedTextColor.YELLOW),
                 Component.text(endState, color),
                 Component.text(winners).color(NamedTextColor.YELLOW),
-                deathAndKillHistory.build());
+                deathAndKillHistory.build(),
+                playerTeams.build()
+        );
     }
 
     //Generate a component of the top 100 players
@@ -123,14 +147,17 @@ public class StatisticFormatter {
                     )).appendNewline();
 
             for (int i = 0; i < players.size(); i++) {
-                String player = players.get(i);
-                int position = i + 1;
+                Document player = players.get(i);
+                String playerName = player.getString("lastName");
+                double kd = player.getDouble("ratio");
+
                 //format the position to always be 3 digits with 000 without using StringUtils
-                String pos = String.format("%03d", position);
+                String pos = String.format("%03d", i + 1);
                 builder.append(Messages.GENERAL_STATS_GLOBAL_ENTRY
                                 .toTranslatable(
                                         Component.text(pos).color(NamedTextColor.GOLD),
-                                        Component.text(player).color(NamedTextColor.YELLOW)
+                                        Component.text(playerName).color(NamedTextColor.YELLOW),
+                                        Component.text(StringUtils.formatNumber(kd)).color(NamedTextColor.YELLOW)
                                 ))
                         .appendNewline();
             }
@@ -138,7 +165,7 @@ public class StatisticFormatter {
         });
     }
 
-    //Get the ranking of a player from mongodb
+    //Get the RANKING of a player from mongodb
     Component formatPlayerStats(PlayerStatistics playerStats) {
         String name = playerStats.getLastName();
         int kills = playerStats.getKills();
