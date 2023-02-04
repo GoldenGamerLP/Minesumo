@@ -12,8 +12,8 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.2'
 
     //Minestom dependency
     compileOnly 'com.github.Minestom.Minestom:Minestom:51ef4779c9'
@@ -32,9 +32,10 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine:3.1.2'
 
     //Json
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.1'
-    implementation 'com.squareup.moshi:moshi:1.14.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
+    implementation("com.squareup.moshi:moshi:1.14.0")
     implementation 'com.squareup.moshi:moshi-adapters:1.14.0'
+    
     //Production only uses GSON
     implementation 'com.google.code.gson:gson:2.10.1'
 
