@@ -108,13 +108,13 @@ public class StatisticFormatter {
         TextComponent.Builder playerTeams = Component.text().appendNewline();
         Map<Integer, List<UUID>> teams = statistics.getTeams();
         //go through the teams and format it
-        if(teams != null && teams.size() > 0) {
+        if (teams != null && teams.size() > 0) {
             for (Map.Entry<Integer, List<UUID>> entry : statistics.getTeams().entrySet()) {
                 String team = String.format("%02d", entry.getKey() + 1);
                 String teamsPlayers = ListUtils.formatList(entry.getValue(), uuid -> participants.get(uuid).getLastName());
 
                 playerTeams.append(Component.text(" "))
-                        .append(Messages.GAME_TEAM_ENTRY
+                        .append(Messages.GENERAL_STATS_TEAM_ENTRY
                                 .toTranslatable(
                                         Component.text(team).color(NamedTextColor.GOLD),
                                         Component.text(teamsPlayers).color(NamedTextColor.YELLOW)
@@ -132,8 +132,8 @@ public class StatisticFormatter {
                 Component.text(duration).color(NamedTextColor.YELLOW),
                 Component.text(endState, color),
                 Component.text(winners).color(NamedTextColor.YELLOW),
-                deathAndKillHistory.build(),
-                playerTeams.build()
+                playerTeams.build(),
+                deathAndKillHistory.build()
         );
     }
 

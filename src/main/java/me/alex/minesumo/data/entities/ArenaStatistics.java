@@ -13,7 +13,7 @@ public final class ArenaStatistics {
 
     final List<UUID> participants;
     final List<KillAndDeathHistory> killsAndDeathHistory;
-    final Map<Integer,List<UUID>> teams;
+    final Map<Integer, List<UUID>> teams;
     final List<UUID> winners;
 
     Date start, stop;

@@ -5,14 +5,12 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import lombok.Getter;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.entities.ArenaStatistics;
 import me.alex.minesumo.data.entities.PlayerStatistics;
-import me.alex.minesumo.utils.MojangUtils;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.jetbrains.annotations.Blocking;
@@ -87,7 +85,7 @@ public class StatisticDB {
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(UUID uuid) {
         Bson filter = playerFilter(uuid);
 
-        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, playerSupplier(uuid,null)));
+        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, playerSupplier(uuid, null)));
     }
 
     @NotNull
