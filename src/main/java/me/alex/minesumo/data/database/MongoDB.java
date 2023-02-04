@@ -26,8 +26,10 @@ public class MongoDB {
 
         MongoClientSettings settings = MongoClientSettings.builder()
                 .applyConnectionString(connectionString)
-                .serverApi(ServerApi.builder().version(ServerApiVersion.V1).build())
-                .uuidRepresentation(UuidRepresentation.JAVA_LEGACY)
+                .serverApi(ServerApi.builder()
+                        .deprecationErrors(false)
+                        .version(ServerApiVersion.V1).build()
+                ).uuidRepresentation(UuidRepresentation.JAVA_LEGACY)
                 .build();
 
         this.mongoClient = MongoClients.create(settings);

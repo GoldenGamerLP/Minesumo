@@ -18,16 +18,11 @@ public class ArenaCMD extends Command {
         var playerArg = ArgumentType.Entity("player")
                 .onlyPlayers(true)
                 .singleEntity(true);
-
         var change = ArgumentType.Literal("change");
         var changeEnum = ArgumentType.Enum("state", ArenaImpl.ArenaState.class);
-
         var maps = ArgumentType.Word("maps");
-
         var maxLifes = ArgumentType.Integer("maxLifes").max(3).min(0);
-
         var startGame = ArgumentType.Literal("start");
-
         var gameIdAndInfo = ArgumentType.Literal("gameID");
 
         maps.setSuggestionCallback((sender, context, suggestion) -> {

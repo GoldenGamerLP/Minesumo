@@ -175,16 +175,16 @@ public class ArenaImpl extends AbstractArena {
         EventDispatcher.call(new PlayerJoinArenaEvent(this, player));
     }
 
-    private void makePlayerSpectator(Player player) {
-        //Spectators only see spectators and players cant see spectators use player#setViewable
-        player.updateViewableRule(player1 -> player1.getGameMode() == GameMode.SPECTATOR || player1.getGameMode() == GameMode.ADVENTURE);
+    public void makePlayerSpectator(Player player) {
+        this.playerStates.put(player.getUuid(), PlayerState.SPECTATOR);
+        //Spectators only see spectators and players cant see spectators use player#setViewable also player only see instance players
+        player.updateViewableRule(player1 ->
+                player1.getGameMode() == GameMode.SPECTATOR || player1.getGameMode() == GameMode.ADVENTURE || player1.getInstance() != player.getInstance());
 
         //register player
         player.setAutoViewable(false);
         player.setGameMode(GameMode.SPECTATOR);
         player.teleport(this.mapConfig.getSpectatorPosition());
-
-        this.playerStates.put(player.getUuid(), PlayerState.SPECTATOR);
     }
 
 
@@ -204,11 +204,13 @@ public class ArenaImpl extends AbstractArena {
             // Clear the player teams
             this.playersTeamIds.clear();
             this.playerStates.clear();
+            this.lives = null;
+            this.state.set(null);
 
             // Unregister the instance
             MinecraftServer.getInstanceManager().unregisterInstance(ArenaImpl.this);
             log.info("Ended Arena {} with UUID {}", this.getGameID(), this.uniqueId);
-        }, TaskSchedule.millis(100), TaskSchedule.stop());
+        }, TaskSchedule.millis(150), TaskSchedule.stop());
     }
 
     private void handlePlayerOutOfArena(PlayerOutOfArenaEvent event) {
@@ -225,7 +227,8 @@ public class ArenaImpl extends AbstractArena {
                 Player attacker = MinecraftServer.getConnectionManager()
                         .getPlayer(player.getTag(PvPEvents.LAST_HIT));
                 EventDispatcher.call(new PlayerDeathEvent(this, player, attacker, pteam, lives[pteam]));
-                if (lives[pteam] == 0) {
+                //One or less than one in a if statement
+                if (lives[pteam] <= 1) {
                     makePlayerSpectator(player);
                     //For PVP
                     player.removeTag(PvPEvents.TEAM_TAG);

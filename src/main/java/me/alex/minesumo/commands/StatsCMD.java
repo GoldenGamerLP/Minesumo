@@ -46,7 +46,11 @@ public class StatsCMD extends Command {
         addSyntax((sender, context) -> {
             String game = context.get(gameID);
 
-            handler.getGameStatistics(game).thenAccept(sender::sendMessage);
+            handler.getGameStatistics(game).thenAccept(sender::sendMessage).whenComplete((unused, throwable) -> {
+                if (throwable != null) {
+                    throwable.printStackTrace();
+                }
+            });
         }, selectID, gameID);
 
         //PlayerName subcommand

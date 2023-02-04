@@ -5,9 +5,9 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.gson.Gson;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.google.gson.JsonObject;
+import com.mongodb.client.*;
+import com.mongodb.client.model.Filters;
 import lombok.Getter;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.entities.ArenaStatistics;
@@ -35,24 +35,7 @@ public class StatisticDB {
     private static final String
             arenaDBName = "arena-stats",
             playerDBName = "player-stats";
-    private static final Bson ranking = new Document("$project", new Document()
-            .append("lastName", "$lastName")
-            .append("playerID", "$playerID")
-            .append("ratio", new Document()
-                    .append("$divide", Arrays.asList(
-                            new Document("$cond", Arrays.asList(
-                                    new Document("$eq", Arrays.asList("$kills", 0)),
-                                    1,
-                                    "$kills"
-                            )),
-                            new Document("$cond", Arrays.asList(
-                                    new Document("$eq", Arrays.asList("$deaths", 0)),
-                                    1,
-                                    "$deaths"
-                            ))
-                    ))
-            )
-    );
+
     @Getter
     private final MongoCollection<Document> arenaDB;
     @Getter
@@ -104,12 +87,12 @@ public class StatisticDB {
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(UUID uuid) {
         Bson filter = playerFilter(uuid);
 
-        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, playerSupplier(uuid)));
+        return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, playerSupplier(uuid,null)));
     }
 
     @NotNull
     public CompletableFuture<PlayerStatistics> getPlayerStatistics(String name) {
-        Bson filter = playerFilter(name);
+        Bson filter = Filters.eq("lastName", name);
 
         return CompletableFuture.supplyAsync(() -> this.getPlayerStats(filter, () -> null));
     }
@@ -154,36 +137,34 @@ public class StatisticDB {
     }
 
     public CompletableFuture<Long> getPlayerRanking(UUID uuid) {
-        return CompletableFuture.supplyAsync(() -> {
-            PlayerStatistics stats = getPlayerCache().get(uuid).join();
-            if (stats == null) return 0L;
-            double kd = (stats.getKills() == 0 ? 1 : stats.getKills()) / (stats.getDeaths() == 0 ? 1D : stats.getDeaths());
+        //Optimize this
+        return this.getPlayerCache().get(uuid).thenApply(playerStatistics -> {
+            if (playerStatistics == null) return 0L;
 
-            Bson sum = new Document("$group", new Document()
-                    .append("_id", null)
-                    .append("count", new Document("$sum", new Document("$cond", Arrays.asList(
-                                    new Document("$lt", Arrays.asList("$ratio", kd)),
-                                    1,
-                                    0
-                            )))
-                    ));
-            Document dc = this.playerDB.aggregate(Arrays.asList(ranking, sum)).first();
-            //if dc is null return zero otherwise get dc #getLong("count")
-            // +1 because the player is not included in the count
-            return dc == null ? 0L : dc.getInteger("count").longValue() + 1L;
+            double kd = (playerStatistics.getKills() == 0 ? 0.1 : playerStatistics.getKills()) / (playerStatistics.getDeaths() == 0 ? 0.1 : playerStatistics.getDeaths());
+            if (kd == 0) return 0L;
+
+            List<Bson> pipeline = Arrays.asList(BsonAggregation.RANKING, BsonAggregation.SORT_KD, BsonAggregation.INDEX_FROM_KD(kd));
+            AggregateIterable<Document> dc = this.playerDB.aggregate(pipeline);
+
+            try (MongoCursor<Document> cursor = dc.cursor()) {
+                if (cursor.hasNext()) {
+                    Document document = cursor.next();
+                    return document.getInteger("count").longValue() + 1L;
+                }
+            }
+            //Default back not confuse anybody seeing this number
+            return this.getPlayers().join();
         });
     }
 
-    public CompletableFuture<List<String>> getTopPlayers(int limit) {
+    public CompletableFuture<List<Document>> getTopPlayers(int limit) {
         return CompletableFuture.supplyAsync(() -> {
-            Bson sort = new Document("$sort", new Document("ratio", -1));
             Bson limitation = new Document("$limit", limit);
 
-            //Optimize this
-            List<Document> documents = this.playerDB.aggregate(Arrays.asList(ranking, sort, limitation)).into(new ArrayList<>());
-            List<String> stats = new LinkedList<>();
-            documents.forEach(dc -> stats.add(dc.getString("lastName")));
-            return stats;
+            List<Bson> pipeline = Arrays.asList(BsonAggregation.RANKING, BsonAggregation.SORT_KD, limitation);
+            AggregateIterable<Document> results = this.playerDB.aggregate(pipeline);
+            return results.into(new LinkedList<>());
         });
     }
 
@@ -245,13 +226,11 @@ public class StatisticDB {
         return gson.fromJson(document.toJson(), clazz);
     }
 
-    @Blocking
-    private Supplier<PlayerStatistics> playerSupplier(UUID uuid) {
-        String name = MojangUtils.fromUuid(uuid.toString()).get("name").getAsString();
+
+    private Supplier<PlayerStatistics> playerSupplier(UUID uuid, String name) {
         return () -> new PlayerStatistics(uuid, name);
     }
 
-    @Blocking
     private Supplier<ArenaStatistics> arenaSupplier(String gameID) {
         return () -> new ArenaStatistics(gameID);
     }

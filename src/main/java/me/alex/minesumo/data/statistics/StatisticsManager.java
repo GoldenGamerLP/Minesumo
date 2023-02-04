@@ -66,4 +66,11 @@ public class StatisticsManager {
             stats.setEndState(state);
         });
     }
+
+    public void addTeam(String gameID, int teamID, List<Player> players) {
+        List<UUID> pls = players.stream().map(Player::getUuid).toList();
+        this.handler.editArenaStats(gameID, stats -> {
+            stats.getTeams().put(teamID, pls);
+        });
+    }
 }

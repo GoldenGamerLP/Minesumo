@@ -31,15 +31,19 @@ public class RoundStartingTask extends AbstractTask {
         }
 
         if (seconds == roundStartingTime.toSeconds()) {
-            arena.addPlayersToTeam();
+
 
             arena.getLivingTeams().forEach(integer -> {
+                //Todo: Add history for teams
                 List<String> players = arena.getPlayersFromTeam(integer).stream().map(Player::getUsername).toList();
-                arena.sendMessage(Component.translatable("Team: " + integer + " | Players: " + players));
+                //TODO: print updates teams
             });
         }
         if (seconds == 0) {
+            arena.addPlayersToTeam();
+
             arena.getPlayers().forEach(arena::teleportPlayerToSpawn);
+            arena.getPlayerFromState(ArenaImpl.PlayerState.SPECTATOR).forEach(arena::makePlayerSpectator);
             arena.changeArenaState(ArenaImpl.ArenaState.INGAME);
         }
 

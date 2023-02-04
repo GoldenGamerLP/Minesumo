@@ -18,7 +18,7 @@ public abstract class AbstractArena extends SharedInstance {
     protected final MapConfig config;
     @Getter
     private final String gameID;
-    protected Integer maxLives = null;
+    private Integer maxLives = 0;
 
     public AbstractArena(@NotNull UUID uniqueId, @NotNull MinesumoInstance instanceContainer, @NotNull MapConfig config, String gameID) {
         super(uniqueId, instanceContainer);
@@ -27,7 +27,7 @@ public abstract class AbstractArena extends SharedInstance {
     }
 
     public Integer getMaxLives() {
-        return maxLives == null ? config.getStartingLives() : maxLives;
+        return maxLives;
     }
 
     public void setMaxLives(int maxLives) {

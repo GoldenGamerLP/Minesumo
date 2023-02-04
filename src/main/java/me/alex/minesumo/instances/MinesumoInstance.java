@@ -29,7 +29,6 @@ public class MinesumoInstance extends InstanceContainer {
     private void basicArenaSetup() {
         this.setTime(6000);
         this.setTimeRate(0);
-        this.setTimeUpdate(null);
     }
 
     public MapConfig getConfig() {

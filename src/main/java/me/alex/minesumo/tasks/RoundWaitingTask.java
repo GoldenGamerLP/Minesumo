@@ -23,19 +23,20 @@ public class RoundWaitingTask extends AbstractTask {
         }
 
         List<Player> players = arena.getPlayerFromState(ArenaImpl.PlayerState.ALIVE);
-        List<Player> waitingPlayers = players.stream()
-                .filter(player -> player.getPlayerConnection().getConnectionState() != ConnectionState.PLAY)
+        //A list of players that are still loading or in a loading screen or did not answer a keep alive packet
+        List<Player> waitingPlayers = players.stream().filter(player ->
+                        !player.isOnline() ||
+                                !player.isActive() ||
+                                !player.didAnswerKeepAlive() ||
+                                !(player.getPlayerConnection().getConnectionState() == ConnectionState.PLAY))
                 .toList();
-        boolean canStartButWaitingForPlayer = waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers();
 
         if (waitingPlayers.isEmpty() && players.size() == arena.getMaxPlayers()) {
             arena.changeArenaState(ArenaImpl.ArenaState.NORMAL_STARTING);
             this.cancel();
         }
 
-
         int maxPlayers = arena.getMaxPlayers();
-
         float percentage = players.size() * 1F / maxPlayers;
         int needed = maxPlayers - players.size();
 

@@ -99,8 +99,8 @@ public class JacksonProviderImpl implements JsonProvider {
         validSerializers.forEach(o -> {
             if (o instanceof JsonSerializer) {
                 module.addSerializer((JsonSerializer<?>) o);
-            } else if (o instanceof JsonDeserializer) {
-                module.addDeserializer(clazz, (JsonDeserializer<T>) o);
+            } else if (o instanceof JsonDeserializer ser) {
+                module.addDeserializer(clazz, (JsonDeserializer<T>) ser);
             }
         });
 

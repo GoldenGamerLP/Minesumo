@@ -3,17 +3,20 @@ package me.alex.minesumo.listener;
 import me.alex.minesumo.Minesumo;
 import me.alex.minesumo.data.entities.PlayerStatistics;
 import me.alex.minesumo.data.statistics.StatisticsManager;
-import me.alex.minesumo.events.ArenaChangeStateEvent;
-import me.alex.minesumo.events.ArenaEndEvent;
-import me.alex.minesumo.events.PlayerDeathEvent;
-import me.alex.minesumo.events.TeamEliminatedEvent;
+import me.alex.minesumo.events.*;
 import me.alex.minesumo.instances.ArenaImpl;
 import me.alex.minesumo.messages.Messages;
+import me.alex.minesumo.tablist.TabManager;
+import me.alex.minesumo.tablist.TablistPlayerChangeEvent;
+import me.alex.minesumo.utils.ColorUtils;
 import me.alex.minesumo.utils.ListUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
+import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
@@ -97,12 +100,21 @@ public class GlobalEventListener {
                     text(event.getTeamID()),
                     text(event.getLastDeathPlayerOfTeam().getUsername()));
 
+            //Set Tab to Spectator
+            TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
+                    event.getLastDeathPlayerOfTeam(),
+                    Component.text("[Spectator] ").color(NamedTextColor.GRAY),
+                    Component.text(""), NamedTextColor.GRAY);
+
+            EventDispatcher.call(change);
+
             instance.sendMessage(component);
         });
 
         gl.addListener(PlayerDeathEvent.class, event -> {
             ArenaImpl instance = (ArenaImpl) event.getInstance();
             String user = event.getPlayer().getUsername();
+            Integer team = event.getTeamId();
 
             Component component;
             if (event.getAttacker() != null)
@@ -113,6 +125,22 @@ public class GlobalEventListener {
                     .toTranslatable(text(user));
 
             instance.sendMessage(component);
+
+            List<Player> pls = instance.getPlayersFromTeam(team);
+            Integer live = instance.getLives()[team];
+
+            //fixme: Update players. Maybe remove this?
+            for (Player pl : pls) {
+                TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
+                        pl,
+                        Component.text("[Team " + team + "] ").color(NamedTextColor.GRAY),
+                        Component.text(" | ").color(NamedTextColor.GRAY)
+                                .append(Component.text(live).color(NamedTextColor.GOLD)),
+                        NamedTextColor.nearestTo(TextColor.color(ColorUtils.getColorFromInt(team).getRGB()))
+                );
+
+                EventDispatcher.call(change);
+            }
 
 
             //Remove PVP Tag
@@ -127,8 +155,34 @@ public class GlobalEventListener {
             ArenaImpl impl = event.getArena();
             if (event.getState() == ArenaImpl.ArenaState.NORMAL_STARTING) {
                 statsMng.startGame(impl.getGameID(), impl.getPlayerFromState(ArenaImpl.PlayerState.ALIVE));
+
+                //Set Tab for alive player to their team + new color
+
             } else if (event.getState() == ArenaImpl.ArenaState.ENDING) {
                 minesumo.getStatsHandler().getArenaCache().synchronous().invalidate(impl.getGameID());
+            } else if (event.getState() == ArenaImpl.ArenaState.INGAME) {
+                //A list of alive players
+                Integer[] lifes = impl.getLives();
+                List<Integer> teams = impl.getLivingTeams();
+
+                for (Integer team : teams) {
+                    List<Player> pls = impl.getPlayersFromTeam(team);
+                    Integer live = lifes[team];
+
+                    statsMng.addTeam(impl.getGameID(), team, pls);
+
+                    for (Player pl : pls) {
+                        TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
+                                pl,
+                                Component.text("[Team " + team + "] ").color(NamedTextColor.GRAY),
+                                Component.text(" | ").color(NamedTextColor.GRAY)
+                                        .append(Component.text(live).color(NamedTextColor.GOLD)),
+                                NamedTextColor.nearestTo(TextColor.color(ColorUtils.getColorFromInt(team).getRGB()))
+                        );
+
+                        EventDispatcher.call(change);
+                    }
+                }
             }
         });
 
@@ -146,6 +200,12 @@ public class GlobalEventListener {
                     .getPlayerCache()
                     .synchronous()
                     .invalidate(event.getPlayer().getUuid());
+
+            TabManager.resetPlayer(event.getPlayer());
+        });
+
+        gl.addListener(PlayerLeaveArenaEvent.class, event -> {
+            TabManager.resetPlayer(event.getPlayer());
         });
 
         if (!isEditorMode)
