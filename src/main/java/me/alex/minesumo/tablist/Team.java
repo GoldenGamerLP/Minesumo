@@ -7,17 +7,20 @@ public class Team {
 
     protected final Component prefix, suffix;
     protected final NamedTextColor color;
+    protected final int priority;
 
     public Team() {
         this.prefix = Component.empty();
         this.suffix = Component.empty();
         this.color = NamedTextColor.WHITE;
+        this.priority = 0;
     }
 
-    public Team(Component prefix, Component suffix, NamedTextColor color) {
+    public Team(Component prefix, Component suffix, NamedTextColor color, int priority) {
         this.prefix = prefix == null ? Component.empty() : prefix;
         this.suffix = suffix == null ? Component.empty() : suffix;
         this.color = color == null ? NamedTextColor.WHITE : color;
+        this.priority = priority;
     }
 
     public Component getSuffix() {
@@ -32,11 +35,16 @@ public class Team {
         return prefix;
     }
 
+    public int getPriority() {
+        return priority;
+    }
 
     public static final class TeamBuilder {
         private Component prefix;
         private Component suffix;
         private NamedTextColor color;
+
+        private int priority;
 
         private TeamBuilder() {
         }
@@ -60,8 +68,13 @@ public class Team {
             return this;
         }
 
+        public TeamBuilder withPriority(int priority) {
+            this.priority = priority;
+            return this;
+        }
+
         public Team build() {
-            return new Team(prefix, suffix, color);
+            return new Team(prefix, suffix, color, priority);
         }
     }
 }

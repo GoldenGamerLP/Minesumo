@@ -101,10 +101,12 @@ public class GlobalEventListener {
                     text(event.getLastDeathPlayerOfTeam().getUsername()));
 
             //Set Tab to Spectator
-            TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
-                    event.getLastDeathPlayerOfTeam(),
-                    Component.text("[Spectator] ").color(NamedTextColor.GRAY),
-                    Component.text(""), NamedTextColor.GRAY);
+            TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(event.getLastDeathPlayerOfTeam(), teamBuilder -> {
+                teamBuilder.withColor(NamedTextColor.GRAY);
+                teamBuilder.withPrefix(Component.text("[Spectator] ").color(NamedTextColor.GRAY));
+                teamBuilder.withPriority(0);
+            });
+
 
             EventDispatcher.call(change);
 
@@ -125,23 +127,6 @@ public class GlobalEventListener {
                     .toTranslatable(text(user));
 
             instance.sendMessage(component);
-
-            List<Player> pls = instance.getPlayersFromTeam(team);
-            Integer live = instance.getLives()[team];
-
-            //fixme: Update players. Maybe remove this?
-            for (Player pl : pls) {
-                TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
-                        pl,
-                        Component.text("[Team " + team + "] ").color(NamedTextColor.GRAY),
-                        Component.text(" | ").color(NamedTextColor.GRAY)
-                                .append(Component.text(live).color(NamedTextColor.GOLD)),
-                        NamedTextColor.nearestTo(TextColor.color(ColorUtils.getColorFromInt(team).getRGB()))
-                );
-
-                EventDispatcher.call(change);
-            }
-
 
             //Remove PVP Tag
             event.getPlayer().removeTag(PvPEvents.LAST_HIT);
@@ -167,18 +152,15 @@ public class GlobalEventListener {
 
                 for (Integer team : teams) {
                     List<Player> pls = impl.getPlayersFromTeam(team);
-                    Integer live = lifes[team];
 
                     statsMng.addTeam(impl.getGameID(), team, pls);
 
                     for (Player pl : pls) {
-                        TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(
-                                pl,
-                                Component.text("[Team " + team + "] ").color(NamedTextColor.GRAY),
-                                Component.text(" | ").color(NamedTextColor.GRAY)
-                                        .append(Component.text(live).color(NamedTextColor.GOLD)),
-                                NamedTextColor.nearestTo(TextColor.color(ColorUtils.getColorFromInt(team).getRGB()))
-                        );
+                        TablistPlayerChangeEvent change = new TablistPlayerChangeEvent(pl, teamBuilder -> {
+                            teamBuilder.withPrefix(Component.text("[" + team + "] ").color(NamedTextColor.GRAY));
+                            teamBuilder.withColor(NamedTextColor.nearestTo(TextColor.color(ColorUtils.getColorFromInt(team).getRGB())));
+                            teamBuilder.withPriority(team + 1);
+                        });
 
                         EventDispatcher.call(change);
                     }

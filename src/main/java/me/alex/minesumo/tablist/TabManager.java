@@ -1,6 +1,7 @@
 package me.alex.minesumo.tablist;
 
 
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
@@ -14,11 +15,10 @@ import net.minestom.server.network.packet.server.play.TeamsPacket;
 import net.minestom.server.scoreboard.Team;
 import net.minestom.server.scoreboard.TeamBuilder;
 import net.minestom.server.scoreboard.TeamManager;
-import net.minestom.server.timer.ExecutionType;
-import net.minestom.server.timer.Scheduler;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -40,7 +40,6 @@ import java.util.function.Consumer;
 public final class TabManager {
 
     private static final TeamManager teamManager = MinecraftServer.getTeamManager();
-    private static final Scheduler scheduler = MinecraftServer.getSchedulerManager();
     private static final Map<Integer, Team> hashComponents = new HashMap<>();
     private static final Map<UUID, Integer> playerTeams = new ConcurrentHashMap<>(6);
     private static final EventNode<PlayerEvent> NODE = EventNode.type("minesumo:tablist", EventFilter.PLAYER);
@@ -53,9 +52,18 @@ public final class TabManager {
             resetPlayer(player);
         });
 
+        NODE.addListener(PlayerDisconnectEvent.class, event -> {
+            Player player = event.getPlayer();
+            removePlayer(player);
+        });
+
         NODE.addListener(TablistPlayerChangeEvent.class, event -> {
             Player player = event.getPlayer();
-            int hash = event.getPrefix().hashCode() + event.getSuffix().hashCode();
+            me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
+            event.getTeamBuilder().accept(builder);
+            me.alex.minesumo.tablist.Team team = builder.build();
+
+            int hash = getHash(team.getPrefix(), team.getSuffix());
 
             //Is in the same team
             if (playerTeams.containsKey(player.getUuid()) && playerTeams.get(player.getUuid()) == hash)
@@ -63,17 +71,17 @@ public final class TabManager {
 
 
             //Register the team
-            registerTeam(hash + "", builder -> {
-                builder.prefix(event.getPrefix());
-                builder.suffix(event.getSuffix());
-                builder.teamColor(event.getColor());
-                builder.collisionRule(TeamsPacket.CollisionRule.NEVER);
-                builder.updateNameTagVisibility(TeamsPacket.NameTagVisibility.ALWAYS);
-                builder.seeInvisiblePlayers();
+            registerTeam(hash + "", team.getPriority(), teamBuilder -> {
+                teamBuilder.prefix(team.getPrefix());
+                teamBuilder.suffix(team.getSuffix());
+                teamBuilder.teamColor(team.getColor());
+                teamBuilder.collisionRule(TeamsPacket.CollisionRule.NEVER);
+                teamBuilder.updateNameTagVisibility(TeamsPacket.NameTagVisibility.ALWAYS);
+                teamBuilder.seeInvisiblePlayers();
             });
 
             //Update the player
-            updatePlayer(player, hash + "");
+            updatePlayer(player, hash);
 
             //Update the player team
             playerTeams.put(player.getUuid(), hash);
@@ -109,14 +117,17 @@ public final class TabManager {
      * @param player the player
      */
     public static void resetPlayer(Player player) {
-        scheduler.scheduleNextTick(() -> {
-            me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
-            defPrefix.accept(player, builder);
-            me.alex.minesumo.tablist.Team team = builder.build();
+        me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
+        defPrefix.accept(player, builder);
+        me.alex.minesumo.tablist.Team team = builder.build();
 
-            TablistPlayerChangeEvent tabChangeEvent = new TablistPlayerChangeEvent(player, team.getPrefix(), team.getSuffix(), team.getColor());
-            EventDispatcher.call(tabChangeEvent);
-        }, ExecutionType.ASYNC);
+        TablistPlayerChangeEvent tabChangeEvent = new TablistPlayerChangeEvent(player, teamBuilder -> {
+            teamBuilder.withPrefix(team.getPrefix());
+            teamBuilder.withSuffix(team.getSuffix());
+            teamBuilder.withColor(team.getColor());
+        });
+
+        EventDispatcher.call(tabChangeEvent);
     }
 
     /**
@@ -125,12 +136,13 @@ public final class TabManager {
      * @param team        the team name
      * @param teamBuilder the team builder
      */
-    private static void registerTeam(String team, Consumer<TeamBuilder> teamBuilder) {
-        if (teamManager.getTeam(team) == null) {
-            TeamBuilder builder = teamManager.createBuilder(team);
+    private static void registerTeam(String team, int priority, Consumer<TeamBuilder> teamBuilder) {
+        String teamName = priority + "_" + team;
+        if (teamManager.getTeam(teamName) == null) {
+            TeamBuilder builder = teamManager.createBuilder(teamName);
             teamBuilder.accept(builder);
-            //Registers the team or updates it
-            builder.build();
+            //Update the hashComponents
+            hashComponents.put(getHash(builder.build()), teamManager.getTeam(teamName));
         }
     }
 
@@ -146,11 +158,11 @@ public final class TabManager {
     /**
      * Updates the player with the team name
      *
-     * @param player   the player
-     * @param teamName the team name
+     * @param player the player
+     * @param hash   the has registered team
      */
-    private static void updatePlayer(Player player, String teamName) {
-        Team team1 = teamManager.getTeam(teamName);
+    private static void updatePlayer(Player player, Integer hash) {
+        Team team1 = hashComponents.get(hash);
         Integer team2 = playerTeams.get(player.getUuid());
         Team firstTeam = team2 == null ? null : hashComponents.get(team2);
 
@@ -163,12 +175,13 @@ public final class TabManager {
             //Only remove from hashComponents if the team is empty
             if (firstTeam.getMembers().isEmpty()) {
                 hashComponents.remove(team2);
+                teamManager.deleteTeam(firstTeam);
             }
         }
 
         team1.addMember(player.getUsername());
         //Update the players team with the hashcode
-        playerTeams.put(player.getUuid(), team1.getPrefix().hashCode() + team1.getSuffix().hashCode());
+        playerTeams.put(player.getUuid(), getHash(team1));
     }
 
     /**
@@ -184,7 +197,16 @@ public final class TabManager {
             //Only remove from hashComponents if the team is empty
             if (team2.getMembers().isEmpty()) {
                 hashComponents.remove(team);
+                teamManager.deleteTeam(team2);
             }
         }
+    }
+
+    private static int getHash(Component prefix, Component suffix) {
+        return Objects.hash(prefix, suffix);
+    }
+
+    private static int getHash(Team team) {
+        return getHash(team.getPrefix(), team.getSuffix());
     }
 }
