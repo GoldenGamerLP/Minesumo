@@ -25,14 +25,14 @@ public class MinesumoMessages {
     };
     private static boolean isRegistered = false;
 
-    public static void innit() {
+    public static void init() {
         if (isRegistered) throw new RuntimeException("You cannot register messages twice.");
         isRegistered = true;
 
         MinestomAdventure.AUTOMATIC_COMPONENT_TRANSLATION = true;
 
         GlobalTranslator globalTranslator = GlobalTranslator.translator();
-        TranslationRegistry registry = TranslationRegistry.create(Key.key("minsumo", "messages"));
+        TranslationRegistry registry = TranslationRegistry.create(Key.key("minesumo", "messages"));
 
         for (Locale locale : locales) {
             ResourceBundle bundle = ResourceBundle.getBundle(bundleName, locale);

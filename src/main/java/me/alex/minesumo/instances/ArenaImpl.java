@@ -234,7 +234,7 @@ public class ArenaImpl extends AbstractArena {
                     player.removeTag(PvPEvents.TEAM_TAG);
                     List<Integer> livingTeam = getLivingTeams();
                     if (!livingTeam.contains(pteam))
-                        //Team Eliminated
+                        //TeamTemplate Eliminated
                         EventDispatcher.call(new TeamEliminatedEvent(this, pteam, player, attacker));
                     int size = livingTeam.size();
                     if (size <= 1) {

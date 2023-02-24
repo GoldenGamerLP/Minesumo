@@ -16,8 +16,9 @@ import net.kyori.adventure.text.format.TextColor;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
+import net.minestom.server.event.Event;
 import net.minestom.server.event.EventDispatcher;
-import net.minestom.server.event.GlobalEventHandler;
+import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.event.player.PlayerLoginEvent;
@@ -36,7 +37,7 @@ public class GlobalEventListener {
 
     public GlobalEventListener(Minesumo minesumo) {
         StatisticsManager statsMng = minesumo.getStatisticsManager();
-        GlobalEventHandler gl = MinecraftServer.getGlobalEventHandler();
+        EventNode<Event> gl = minesumo.getEventNode();
 
         container = MinecraftServer.getInstanceManager().createInstanceContainer();
         container.setGenerator(unit -> unit.modifier().fillHeight(0, 1, Block.STONE));
@@ -147,7 +148,6 @@ public class GlobalEventListener {
                 minesumo.getStatsHandler().getArenaCache().synchronous().invalidate(impl.getGameID());
             } else if (event.getState() == ArenaImpl.ArenaState.INGAME) {
                 //A list of alive players
-                Integer[] lifes = impl.getLives();
                 List<Integer> teams = impl.getLivingTeams();
 
                 for (Integer team : teams) {

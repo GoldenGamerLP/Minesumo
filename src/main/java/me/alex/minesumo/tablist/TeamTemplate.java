@@ -3,20 +3,20 @@ package me.alex.minesumo.tablist;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
-public class Team {
+public class TeamTemplate {
 
     protected final Component prefix, suffix;
     protected final NamedTextColor color;
     protected final int priority;
 
-    public Team() {
+    public TeamTemplate() {
         this.prefix = Component.empty();
         this.suffix = Component.empty();
         this.color = NamedTextColor.WHITE;
         this.priority = 0;
     }
 
-    public Team(Component prefix, Component suffix, NamedTextColor color, int priority) {
+    public TeamTemplate(Component prefix, Component suffix, NamedTextColor color, int priority) {
         this.prefix = prefix == null ? Component.empty() : prefix;
         this.suffix = suffix == null ? Component.empty() : suffix;
         this.color = color == null ? NamedTextColor.WHITE : color;
@@ -73,8 +73,8 @@ public class Team {
             return this;
         }
 
-        public Team build() {
-            return new Team(prefix, suffix, color, priority);
+        public TeamTemplate build() {
+            return new TeamTemplate(prefix, suffix, color, priority);
         }
     }
 }

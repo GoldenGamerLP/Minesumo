@@ -8,15 +8,15 @@ import java.util.function.Consumer;
 
 public class TablistPlayerChangeEvent implements PlayerEvent {
     private final Player player;
-    private final Consumer<Team.TeamBuilder> teamBuilder;
+    private final Consumer<TeamTemplate.TeamBuilder> teamBuilder;
 
 
-    public TablistPlayerChangeEvent(Player player, Consumer<Team.TeamBuilder> teamBuilder) {
+    public TablistPlayerChangeEvent(Player player, Consumer<TeamTemplate.TeamBuilder> teamBuilder) {
         this.player = player;
         this.teamBuilder = teamBuilder;
     }
 
-    public Consumer<Team.TeamBuilder> getTeamBuilder() {
+    public Consumer<TeamTemplate.TeamBuilder> getTeamBuilder() {
         return teamBuilder;
     }
 

@@ -8,13 +8,15 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.event.EventDispatcher;
 import net.minestom.server.event.EventFilter;
 import net.minestom.server.event.EventNode;
+import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
-import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.event.trait.PlayerEvent;
 import net.minestom.server.network.packet.server.play.TeamsPacket;
 import net.minestom.server.scoreboard.Team;
 import net.minestom.server.scoreboard.TeamBuilder;
 import net.minestom.server.scoreboard.TeamManager;
+import net.minestom.server.thread.Acquirable;
+import org.jetbrains.annotations.Blocking;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,13 +45,13 @@ public final class TabManager {
     private static final Map<Integer, Team> hashComponents = new HashMap<>();
     private static final Map<UUID, Integer> playerTeams = new ConcurrentHashMap<>(6);
     private static final EventNode<PlayerEvent> NODE = EventNode.type("minesumo:tablist", EventFilter.PLAYER);
-    private static BiConsumer<Player, me.alex.minesumo.tablist.Team.TeamBuilder> defPrefix = (player, teamBuilder) -> teamBuilder.withColor(NamedTextColor.GRAY);
+    private static BiConsumer<Player, TeamTemplate.TeamBuilder> defPrefix = (player, teamBuilder) -> teamBuilder.withColor(NamedTextColor.GRAY);
 
     static {
         //Prefix on player spawn event
-        NODE.addListener(PlayerSpawnEvent.class, event -> {
-            Player player = event.getPlayer();
-            resetPlayer(player);
+        NODE.addListener(AsyncPlayerPreLoginEvent.class, event -> {
+            Acquirable<Player> player = event.getPlayer().getAcquirable();
+            player.sync(TabManager::resetPlayer);
         });
 
         NODE.addListener(PlayerDisconnectEvent.class, event -> {
@@ -59,9 +61,9 @@ public final class TabManager {
 
         NODE.addListener(TablistPlayerChangeEvent.class, event -> {
             Player player = event.getPlayer();
-            me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
+            TeamTemplate.TeamBuilder builder = TeamTemplate.TeamBuilder.newBuilder();
             event.getTeamBuilder().accept(builder);
-            me.alex.minesumo.tablist.Team team = builder.build();
+            TeamTemplate team = builder.build();
 
             int hash = getHash(team.getPrefix(), team.getSuffix());
 
@@ -116,10 +118,11 @@ public final class TabManager {
      *
      * @param player the player
      */
+    @Blocking
     public static void resetPlayer(Player player) {
-        me.alex.minesumo.tablist.Team.TeamBuilder builder = me.alex.minesumo.tablist.Team.TeamBuilder.newBuilder();
+        TeamTemplate.TeamBuilder builder = TeamTemplate.TeamBuilder.newBuilder();
         defPrefix.accept(player, builder);
-        me.alex.minesumo.tablist.Team team = builder.build();
+        TeamTemplate team = builder.build();
 
         TablistPlayerChangeEvent tabChangeEvent = new TablistPlayerChangeEvent(player, teamBuilder -> {
             teamBuilder.withPrefix(team.getPrefix());
@@ -151,7 +154,7 @@ public final class TabManager {
      *
      * @param prefix the prefix
      */
-    public static void defaultPrefix(BiConsumer<Player, me.alex.minesumo.tablist.Team.TeamBuilder> prefix) {
+    public static void defaultPrefix(BiConsumer<Player, TeamTemplate.TeamBuilder> prefix) {
         defPrefix = prefix;
     }
 

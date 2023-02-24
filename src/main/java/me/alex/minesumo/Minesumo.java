@@ -19,19 +19,16 @@ import me.alex.minesumo.map.MapSelection;
 import me.alex.minesumo.map.SchematicHandler;
 import me.alex.minesumo.messages.MinesumoMessages;
 import me.alex.minesumo.tablist.TabManager;
+import me.alex.minesumo.tablist.prefixprovider.DefaultPrefixProvider;
+import me.alex.minesumo.tablist.prefixprovider.LuckpermsPrefixProvider;
 import me.alex.minesumo.utils.json.JsonMapper;
 import me.alex.minesumo.utils.json.configurations.JsonConfigurationLoader;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.luckperms.api.LuckPerms;
-import net.luckperms.api.LuckPermsProvider;
-import net.luckperms.api.cacheddata.CachedMetaData;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.coordinate.Pos;
-import net.minestom.server.entity.Player;
 import net.minestom.server.extensions.Extension;
+import net.minestom.server.extensions.ExtensionClassLoader;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -40,7 +37,6 @@ public class Minesumo extends Extension {
 
     private final AtomicBoolean hasStarted = new AtomicBoolean(false);
     private final long startTime = System.currentTimeMillis();
-    private final MiniMessage miniMesssage = MiniMessage.miniMessage();
     private JsonConfigurationLoader<MinesumoMainConfig> mainCFG;
     private JsonConfigurationLoader<MinesumoMapConfig> mapCFG;
     private SchematicHandler schematicHandler;
@@ -51,7 +47,6 @@ public class Minesumo extends Extension {
     private StatisticsManager statisticsManager;
     private StatisticFormatter statisticFormatter;
     private MapSelection mapSelection;
-    private LuckPerms luckPerms;
 
     @Override
     public void preInitialize() {
@@ -66,8 +61,6 @@ public class Minesumo extends Extension {
                 new JacksonPosDeserializer())
         );
 
-        System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism", "4");
-
         //For Config Uses
         this.mainCFG = new JsonConfigurationLoader<>(
                 this.getDataDirectory().resolve("configuration.json").toFile(),
@@ -79,7 +72,7 @@ public class Minesumo extends Extension {
                 MinesumoMapConfig.class
         );
 
-        MinesumoMessages.innit();
+        MinesumoMessages.init();
     }
 
     @Override
@@ -105,9 +98,6 @@ public class Minesumo extends Extension {
         this.statisticFormatter = new StatisticFormatter(this);
         this.mapSelection = new MapSelection(this);
 
-        this.getLuckperms();
-
-
         new GlobalEventListener(this);
 
         if (getConfig().getIsInEditorMode()) {
@@ -121,28 +111,30 @@ public class Minesumo extends Extension {
         new StatsCMD(this);
         new MapInfoCMD(this);
 
-        TabManager.defaultPrefix((player, teamBuilder) -> {
-            if (luckPerms != null) {
-                CachedMetaData data = luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
-                teamBuilder.withPrefix(miniMesssage.deserialize(data.getPrefix()));
+        //if LuckpermsProvder.class is available use LuckpermsPrefixProvider otherwise use DefaultPrefixProvider
+        //This is a workaround because Luckperms is not a required dependency
+        //If you want to use Luckperms as a required dependency you can remove the try and catch
+        //we wait 1 seconds to make sure that Luckperms has been loaded
+        MinecraftServer.getSchedulerManager().buildTask(() -> {
+            Extension ex = MinecraftServer.getExtensionManager().getExtension("LuckPerms");
+            if (ex != null) {
+                //Log that Luckperms is available and we use LuckpermsPrefixProvider
+                //FixMe: This is a workaround because Luckperms is not a required dependency
+                log.info("Luckperms is available!");
+                ExtensionClassLoader classLoader = (ExtensionClassLoader) ex.getClass().getClassLoader();
+                ExtensionClassLoader thisClazz = (ExtensionClassLoader) this.getClass().getClassLoader();
 
-            } else teamBuilder.withPrefix(Component.text(" "));
+                thisClazz.addChild(classLoader);
+                TabManager.defaultPrefix(new LuckpermsPrefixProvider(this.getStatsHandler()));
+            } else {
+                //Log that Luckperms is not available and we use DefaultPrefixProvider
+                log.info("Using default prefix provider!");
+                TabManager.defaultPrefix(new DefaultPrefixProvider(this.getStatsHandler()));
+            }
+            this.getEventNode().addChild(TabManager.getNode());
+            hasStarted.set(true);
+        }).delay(Duration.ofMillis(500)).schedule();
 
-            //Black color
-            teamBuilder.withColor(NamedTextColor.GRAY);
-
-            long ranking = getStatsHandler().getPlayers().join() -
-                    (getStatsHandler().getPlayerRanking(player.getUuid()).join() - 1);
-
-            Component suffix = Component.text(" | ").color(NamedTextColor.GRAY)
-                    .append(Component.text(ranking).color(NamedTextColor.YELLOW));
-
-            teamBuilder.withSuffix(suffix);
-        });
-
-        MinecraftServer.getGlobalEventHandler().addChild(TabManager.getNode());
-
-        hasStarted.set(true);
         log.info("Minesumo has been initialized!");
         log.info("Took {}ms", System.currentTimeMillis() - startTime);
     }
@@ -161,12 +153,6 @@ public class Minesumo extends Extension {
         }
         this.mainCFG = null;
         this.mapCFG = null;
-    }
-
-    public void getLuckperms() {
-        //Test if class is available and try and catch
-
-        this.luckPerms = LuckPermsProvider.get();
     }
 
     public MinesumoMainConfig getConfig() {
