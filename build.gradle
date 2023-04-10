@@ -23,7 +23,7 @@ dependencies {
     implementation 'com.github.hollow-cube.common:schem:935bb279e6'
 
     //MongoDB
-    implementation 'org.mongodb:mongodb-driver-sync:4.9.0'
+    implementation 'org.mongodb:mongodb-driver-sync:4.9.1'
 
     //Minimessages
     implementation "net.kyori:adventure-text-minimessage:4.12.0"
